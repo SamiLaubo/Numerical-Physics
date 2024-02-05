@@ -23,10 +23,14 @@ def crank_nicolson_solver(D, a, b, T, Nx, dt, reflective=True):
     np.fill_diagonal(A, 1 + alpha)
     np.fill_diagonal(A[1:], -alpha/2)
     np.fill_diagonal(A[:, 1:], -alpha/2)
+    B = np.zeros((Nx + 1, Nx + 1))
+    np.fill_diagonal(B, 1 - alpha)
+    np.fill_diagonal(B[1:], alpha/2)
+    np.fill_diagonal(B[:, 1:], alpha/2)
 
-    # Time-stepping loop
+    # Solve over time
     for n in range(Nt):
-        b = np.dot(A, u)
+        b = np.dot(B, u)
         if reflective: # Reflective boundary condition
             b[0] = b[2]
             b[-1] = b[-3]
@@ -42,7 +46,7 @@ def crank_nicolson_solver(D, a, b, T, Nx, dt, reflective=True):
 # Example usage
 D = 1.
 a, b = 0.0, 1.0
-T = 0.1
+T = 0.01
 Nx = 51
 # Nt = 1000
 dt = 1.818e-4
