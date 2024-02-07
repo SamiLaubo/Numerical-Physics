@@ -6,6 +6,9 @@ import scipy.integrate
 from numba import njit
 import scipy.special
 
+D_POS = 1.1
+D_NEG = 1
+
 class Diffusion:
     def __init__(self, D, a, b, T, Nx, dt):
         self.D = D
@@ -22,8 +25,8 @@ class Diffusion:
         if D_type == "constant":
             D = np.ones_like(x) * self.D
         elif D_type == "step":
-            D_pos = 2
-            D_neg = 1
+            D_pos = D_POS
+            D_neg = D_NEG
             D = np.ones_like(x)
             D[x < 0] = D_neg
             D[x >= 0] = D_pos
@@ -97,8 +100,8 @@ class Diffusion:
             u = self.u0 / (np.sqrt(4*np.pi*self.D*self.T)) * np.exp(- (x - x0)**2 / (4*self.D*self.T))
 
         elif D_type == "step":
-            D_pos = 2
-            D_neg = 1
+            D_pos = D_POS
+            D_neg = D_NEG
             D = np.ones_like(x)
             D[x < 0] = D_neg
             D[x >= 0] = D_pos
@@ -164,18 +167,18 @@ def main():
 
     # 2.5
     reflective_CN = Diff.crank_nicolson_solver(D_type=D_type, reflective=True)
-    absorbing_CN = Diff.crank_nicolson_solver(D_type=D_type, reflective=False)
+    # absorbing_CN = Diff.crank_nicolson_solver(D_type=D_type, reflective=False)
 
     # 2.6
     Diff.check_mass_conservation(reflective_CN[0], reflective_CN[1])
-    Diff.check_mass_conservation(absorbing_CN[0], absorbing_CN[1])
+    # Diff.check_mass_conservation(absorbing_CN[0], absorbing_CN[1])
 
     # 2.7
     analytical_unbounded = Diff.analytical_unbounded(D_type=D_type)
 
     # 2.8
     reflective_AB = Diff.analytical_bounded(reflective=True)
-    absorbing_AB = Diff.analytical_bounded(reflective=False)
+    # absorbing_AB = Diff.analytical_bounded(reflective=False)
 
 
     # Plotting
@@ -190,14 +193,14 @@ def main():
     plt.legend()
     plt.show()
 
-    plt.figure()
-    plt.title("Absorbing Boundaries")
-    plt.plot(absorbing_CN[0], absorbing_CN[1], '.', label='Crank-Nicolson')
-    plt.plot(absorbing_AB[0], absorbing_AB[1], label="Analytical Solution")
-    plt.xlabel('x')
-    plt.ylabel('Concentration')
-    plt.legend()
-    plt.show()
+    # plt.figure()
+    # plt.title("Absorbing Boundaries")
+    # plt.plot(absorbing_CN[0], absorbing_CN[1], '.', label='Crank-Nicolson')
+    # plt.plot(absorbing_AB[0], absorbing_AB[1], label="Analytical Solution")
+    # plt.xlabel('x')
+    # plt.ylabel('Concentration')
+    # plt.legend()
+    # plt.show()
 
 if __name__ == "__main__":
     main()
