@@ -6,7 +6,7 @@ import scipy.integrate
 from numba import njit
 import scipy.special
 
-D_POS = 1.1
+D_POS = 5
 D_NEG = 1
 
 class Diffusion:
@@ -43,12 +43,18 @@ class Diffusion:
         A = np.zeros((self.Nx + 1, self.Nx + 1))
         np.fill_diagonal(A, 1 + alpha)
         np.fill_diagonal(A[1:], -alpha/2)
-        np.fill_diagonal(A[:, 1:], -alpha/2)
+        np.fill_diagonal(A[:, 1:], -alpha[1:]/2)
+        # np.fill_diagonal(A[1:], -alpha[1:]/2)
+        # np.fill_diagonal(A[:, 1:], -alpha/2)
+
+        # print(f'{A[len(A)//2-2:len(A)//2+2] = }')
 
         B = np.zeros((self.Nx + 1, self.Nx + 1))
         np.fill_diagonal(B, 1 - alpha)
         np.fill_diagonal(B[1:], alpha/2)
-        np.fill_diagonal(B[:, 1:], alpha/2)
+        np.fill_diagonal(B[:, 1:], alpha[1:]/2)
+        # np.fill_diagonal(B[1:], alpha[1:]/2)
+        # np.fill_diagonal(B[:, 1:], alpha/2)
 
         # Boundary condition
         if reflective:
@@ -155,9 +161,9 @@ def main():
     # Example usage
     D = 1.
     D_type = "step"
-    a, b = -1.0, 1.0
+    a, b = -2.0, 2.0
     T = 0.01
-    Nx = 101
+    Nx = 100
     # Nt = 1000
     dt = 1.818e-4
 
@@ -184,7 +190,7 @@ def main():
     # Plotting
     plt.figure()
     plt.title("Reflective Boundaries")
-    plt.plot(reflective_CN[0], reflective_CN[1], '.', label='Crank-Nicolson')
+    plt.plot(reflective_CN[0], 2*reflective_CN[1], '.', label='Crank-Nicolson')
     # plt.plot(reflective_AB[0], reflective_AB[1], label="Analytical Solution")
     plt.plot(analytical_unbounded[0], analytical_unbounded[1], label="Analytical Unbounded Solution")
     # plt.title('Crank-Nicolson Solution for Diffusion Equation')
@@ -204,3 +210,8 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+# Q
+    # 2.7
+    # Lower mass for step crank-nicolson
