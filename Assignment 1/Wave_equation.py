@@ -20,15 +20,21 @@ class Wave_Solver:
         self.XX, self.YY = np.meshgrid(xy_values, xy_values)
         self.beta = self.c**2 * self.dt**2 / self.h**2
 
+        print(f'{self.h / self.dt / np.sqrt(2) = }')
 
-    def explicit_solver(self):
+
+    def explicit_solver(self, init_cond="normal"):
         # (t, x, y)
         u = np.zeros((self.Nt, self.Nx, self.Nx))
 
         # Initial condition
-        sin_x = np.sin(np.pi*self.XX)
-        sin_y = np.sin(2*np.pi*self.YY)
-        u[0] = sin_x * sin_y
+        if init_cond == "normal":
+            sin_x = np.sin(np.pi*self.XX)
+            sin_y = np.sin(2*np.pi*self.YY)
+            u[0] = sin_x * sin_y
+
+        else:
+            u[0] = np.exp(-((self.XX - 0.5)**2 + (self.YY - 0.5)**2)/0.001)
 
         # Boundary condition
         u[0, :, 0] = 0
@@ -93,7 +99,7 @@ class Wave_Solver:
             fargs=(u, surface)
         )
 
-        path = "output/wave_equation/explicit_solution_test.gif"
+        path = "output/wave_equation/explicit_solution_wave.gif"
         if os.path.exists(path):
             os.remove(path)
         anim.save(path, fps=30)
@@ -102,11 +108,11 @@ class Wave_Solver:
 
 if __name__ == '__main__':
 
-    WS = Wave_Solver(a=0, b=1, Nx=100, Nt=10, T=2/np.sqrt(5))
+    WS = Wave_Solver(a=0, b=1, Nx=100, Nt=200, T=2/np.sqrt(5))
 
     # u = WS.analytical_solution()
     t1 = time.time()
-    u = WS.explicit_solver()
+    u = WS.explicit_solver(init_cond="wave")
     t2 = time.time()
     print(f'Solving time: {t2 - t1}')
 
