@@ -135,12 +135,51 @@ class Schrodinger:
         for i in range(min(eig_vecs.shape[1], 20)):
             for j in range(i+1, min(eig_vecs.shape[1], 20)):
                 print(f'{self.alpha_n(eig_vecs[i], eig_vecs[j]) = }')
+
+    # Task 2.10
+    def init_cond(self, name="psi_1"):
+        if name == "psi_1":
+            self.Psi_0 =  np.sqrt(2) * np.sin(np.pi * self.x_)
+
+
+    def evolve(self):
+        # Load eigenvalues and vectors
+        eig_vals, eig_vecs = self.load_eigs()
+        alpha = np.zeros(len(eig_vals))
+
+        # Compute alpha_n
+        for n in range(len(eig_vals)):
+            alpha[n] = self.alpha_n(eig_vecs[:, n], self.Psi_0)
+
+        # Evolve
+        @njit
+        def f(Nt, Nx, t_, eig_vals, eig_vecs):
+            Psi = np.zeros((Nt, Nx), dtype=np.complex128)
+            for idx, t in enumerate(t_):
+                Psi[idx] = np.sum(alpha * np.exp(-1j*eig_vals*t) * eig_vecs, axis=1)
+
+                Psi[idx] /= np.trapz(Psi[idx]**2)
+            
+            return Psi
+        
+        Psi = f(self.Nt, self.Nx, self.t_, eig_vals, eig_vecs)
+
+
+        plt.figure()
+        for i in range(5):
+            plt.plot(self.x_, Psi[Psi.shape[0]//5*i], label=f"t={self.t_[Psi.shape[0]//5*i]}")
+        plt.legend()
+        plt.show()
+
+        # print(f'{np.trapz(Psi, axis=0) = }')
+        print(f'{np.trapz(Psi[0]**2) = }')
+        # print(f'{Psi = }')
             
 
 if __name__ == '__main__':
     L = 1
 
-    S = Schrodinger(L=L, Nx=100)
+    S = Schrodinger(L=L, Nx=1000)
 
     # Task 2.4
     # S.eigen(plot=True)
@@ -152,4 +191,19 @@ if __name__ == '__main__':
     print(f'Time: {t2 - t1}')
 
     # Task 2.7
-    S.check_orthogonality()
+    # S.check_orthogonality()
+
+    ## Task 2.10
+    # Set initial condition to first eigen function
+    S.init_cond(name="psi_1")
+    t1 = time.time()
+    S.evolve()
+    t2 = time.time()
+    print(f'Time: {t2 - t1}')
+
+
+
+
+# TODO:
+    # Fix plots and energy label
+    # Fix same size for Nx in loaded eigvals and Psi_0: is correct for 1000
