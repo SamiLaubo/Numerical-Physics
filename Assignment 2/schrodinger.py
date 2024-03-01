@@ -10,6 +10,7 @@ from scipy.constants import hbar
 
 class Schrodinger:
     def __init__(self, L, Nx, Nt=1, T=1, m=1) -> None:
+        # Values
         self.L = L
         self.T = T
         self.m = m
@@ -20,10 +21,11 @@ class Schrodinger:
         self.Nx = Nx
         self.Nt = Nt
 
+        # Create discretization
         self.t, self.dt = np.linspace(0, T, Nt, retstep=True)
         self.x, self.dx = np.linspace(0, L, Nx, retstep=True)
 
-        # t' and x'
+        # Dimentionless t' and x'
         self.t_, self.dt_ = np.linspace(0, T / self.t0, Nt, retstep=True)
         self.x_, self.dx_ = np.linspace(0, 1, Nx, retstep=True)
    
@@ -31,49 +33,43 @@ class Schrodinger:
     def eigen(self, Nx=-1, plot=False, save=False):
         # Solve A Psi = lambda Psi
 
+        # Create matrix and step length dx
         if Nx == -1:
             A = np.zeros((self.Nx, self.Nx))
             dx = self.dx_
-            # A /= self.dx_**2
         else:
             A = np.zeros((Nx, Nx))
             dx = 1 / (Nx-1)
-            # A /= (1 / (Nx-1))
 
         A /= dx**2
-
         np.fill_diagonal(A, 2)
         np.fill_diagonal(A[1:], -1)
         np.fill_diagonal(A[:, 1:], -1)
 
-        # FIX chach wich version of eigh is correct
+        # Find eigen values and vectors
+        # Normalize - Is already normalized
         eig_vals, eig_vecs = np.linalg.eigh(A)
         eig_vals /= dx**2
 
-        # Normalize - Is already normalized
-        # print(f'{np.trapz(eig_vecs**2, axis=0) = }')
-        # eig_vecs /= np.trapz(eig_vecs**2, axis=0)
-        # print(f'{np.trapz(eig_vecs**2, axis=0) = }')
-
+        # Analytical solution
         n = np.arange(len(eig_vals))+1
         lmbda = (np.pi*n)**2
 
         if plot:
-            # Eig vecs
-            # plt.figure()
-            # for i in range(3):
-            #     plt.plot(eig_vecs[:, i], label=f"eval={eig_vals[i]:.2f}")
-            # plt.show()
+            # Plot three first eigenfunctions
+            plt.figure()
+            for i in range(3):
+                plt.plot(eig_vecs[:, i], label=f"eval={eig_vals[i]:.2f}")
+            plt.show()
 
             # Task 2.4
             plt.figure()
             plt.plot(n, eig_vals, label="Numerical eigenvalues")
             plt.plot(n, lmbda, label="Analytical eigenvalues")
 
-            # FIX axes energy
             plt.title("Eigenvalues")
             plt.xlabel("n")
-            plt.ylabel(r"$\lambda_n$")
+            plt.ylabel(r"$\lambda_n = \frac{2mL^2}{\hbar^2}E_n$")
             plt.legend()
             plt.show()
 
@@ -84,27 +80,27 @@ class Schrodinger:
         return eig_vals, eig_vecs, lmbda
 
     def eigval_error_dx(self, Nx_low, Nx_high, N, save=False):
+        # Arrays to save results
         eigval_error = np.zeros(N)
         Nx = np.linspace(Nx_low, Nx_high, N, dtype=np.int32)
 
-        # FIX parallell
+        # Loop through Nx (dx)
         for i in range(N):
-            eig_vals_num, _, eig_vals_anal = self.eigen(Nx=Nx[i], save=save, plot=False)
+            # Get eigenvalues
+            eig_vals_num, _, eig_vals_analytical = self.eigen(Nx=Nx[i], save=save, plot=False)
 
-            # Sum of Squared Error (SSE)
-            eigval_error[i] = np.sum(np.sqrt((eig_vals_num - eig_vals_anal)**2)) / len(eig_vals_num)
+            # Root-Mean-Square-Deviation (RMSE)
+            eigval_error[i] = np.sqrt(np.sum((eig_vals_num - eig_vals_analytical)**2) / len(eig_vals_num))
 
         plt.figure()
-        # plt.plot(1 / (Nx-1), eigval_error)
-        plt.plot(Nx, eigval_error)
-        # plt.semilogx(dx, eigval_error)
-        # plt.plot(dx, eigval_error)
+        plt.plot(1 / (Nx-1), eigval_error)
         plt.title("Eigenvalue error")
         plt.xlabel(r"$\Delta x$")
-        plt.ylabel("Error (SSE)")
+        plt.ylabel("RMSE")
         plt.show()
 
     def load_eigs(self, all=False):
+        # Load eigenvalues and vectors from saved files
         eigval_paths = glob.glob("output/t24_eigs/eigval*")
 
         dx = [float(p.split("_")[-1][:-4]) for p in eigval_paths]
@@ -138,11 +134,15 @@ class Schrodinger:
 
     # Task 2.10
     def init_cond(self, name="psi_1"):
+        # Create initial function
         if name == "psi_1":
             self.Psi_0 =  np.sqrt(2) * np.sin(np.pi * self.x_)
+        elif name == "delta":
+            self.Psi_0 = np.zeros_like(self.x_)
+            self.Psi_0[len(self.Psi_0)//2] = 1 / self.dx_
 
 
-    def evolve(self):
+    def evolve(self, plot=True):
         # Load eigenvalues and vectors
         eig_vals, eig_vecs = self.load_eigs()
         alpha = np.zeros(len(eig_vals))
@@ -152,41 +152,39 @@ class Schrodinger:
             alpha[n] = self.alpha_n(eig_vecs[:, n], self.Psi_0)
 
         # Evolve
-        @njit
+        # @njit
         def f(Nt, Nx, t_, eig_vals, eig_vecs):
             Psi = np.zeros((Nt, Nx), dtype=np.complex128)
             for idx, t in enumerate(t_):
                 Psi[idx] = np.sum(alpha * np.exp(-1j*eig_vals*t) * eig_vecs, axis=1)
 
-                Psi[idx] /= np.trapz(Psi[idx]**2)
+                # Normalize
+                Psi[idx] /= np.sqrt(np.trapz(Psi[idx]**2))
             
             return Psi
         
         Psi = f(self.Nt, self.Nx, self.t_, eig_vals, eig_vecs)
 
+        # Plot Psi
+        if plot:
+            plt.figure()
+            for i in range(5):
+                plt.plot(self.x_, Psi[Psi.shape[0]//5*i], label=f"t={self.t_[Psi.shape[0]//5*i]:.2e}")
+            plt.legend()
+            plt.show()
 
-        plt.figure()
-        for i in range(5):
-            plt.plot(self.x_, Psi[Psi.shape[0]//5*i], label=f"t={self.t_[Psi.shape[0]//5*i]}")
-        plt.legend()
-        plt.show()
-
-        # print(f'{np.trapz(Psi, axis=0) = }')
-        print(f'{np.trapz(Psi[0]**2) = }')
-        # print(f'{Psi = }')
-            
 
 if __name__ == '__main__':
     L = 1
 
-    S = Schrodinger(L=L, Nx=1000)
+    S = Schrodinger(L=L, Nx=1000, Nt=100, T=1e8)
 
     # Task 2.4
     # S.eigen(plot=True)
 
     # Task 2.5
     t1 = time.time()
-    # S.eigval_error_dx(Nx_low=50, Nx_high=1000, N=20, save=True)
+    S.eigval_error_dx(Nx_low=50, Nx_high=1000, N=20, save=True)
     t2 = time.time()
     print(f'Time: {t2 - t1}')
 
@@ -195,15 +193,14 @@ if __name__ == '__main__':
 
     ## Task 2.10
     # Set initial condition to first eigen function
-    S.init_cond(name="psi_1")
-    t1 = time.time()
-    S.evolve()
-    t2 = time.time()
-    print(f'Time: {t2 - t1}')
+    # S.init_cond(name="delta")
+    # t1 = time.time()
+    # S.evolve()
+    # t2 = time.time()
+    # print(f'Time: {t2 - t1}')
 
 
 
 
 # TODO:
-    # Fix plots and energy label
     # Fix same size for Nx in loaded eigvals and Psi_0: is correct for 1000
