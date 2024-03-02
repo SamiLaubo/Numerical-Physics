@@ -147,23 +147,31 @@ class Schrodinger:
                 print(f'{self.alpha_n(eig_vecs[i], eig_vecs[j]) = }')
 
     # Task 2.10
-    def init_cond(self, name="psi_1"):
+    def init_cond(self, name="psi_1", eigenfunc_idxs=[]):
         # Create initial function
         if name == "psi_1":
             self.Psi_0 =  np.sqrt(2) * np.sin(np.pi * self.x_)
         elif name == "delta":
             self.Psi_0 = np.zeros_like(self.x_)
             self.Psi_0[len(self.Psi_0)//2] = 1 / self.dx_
+        elif name == "eigenfuncs":
+            self.Psi_0 = np.zeros_like(self.x_)
+
+            for idx in eigenfunc_idxs:
+                self.Psi_0 += self.eig_vecs[:, idx]
+            # Normalize
+            self.Psi_0 /= np.sqrt(len(eigenfunc_idxs))
+
 
 
     def evolve(self, plot=True):
         # Load eigenvalues and vectors
-        eig_vals, eig_vecs = self.load_eigs()
-        alpha = np.zeros(len(eig_vals))
+        # eig_vals, eig_vecs = self.load_eigs()
+        alpha = np.zeros(len(self.eig_vals))
 
         # Compute alpha_n
-        for n in range(len(eig_vals)):
-            alpha[n] = self.alpha_n(eig_vecs[:, n], self.Psi_0)
+        for n in range(len(self.eig_vals)):
+            alpha[n] = self.alpha_n(self.eig_vecs[:, n], self.Psi_0)
 
         # Evolve
         # @njit
@@ -173,11 +181,11 @@ class Schrodinger:
                 Psi[idx] = np.sum(alpha * np.exp(-1j*eig_vals*t) * eig_vecs, axis=1)
 
                 # Normalize
-                Psi[idx] /= np.sqrt(np.trapz(Psi[idx]**2))
+                Psi[idx] /= np.sqrt(np.trapz(Psi[idx]*np.conj(Psi[idx])))
             
             return Psi
         
-        Psi = f(self.Nt, self.Nx, self.t_, eig_vals, eig_vecs)
+        Psi = f(self.Nt, self.Nx, self.t_, self.eig_vals, self.eig_vecs)
 
         # Plot Psi
         if plot:
@@ -189,68 +197,91 @@ class Schrodinger:
 
     def plot_eig_values(self, Schrodinger_2=None, n_eig_vecs=4, n_eig_vals=10, plot_vals_n=False):
             
-            # Plot eigenfunctions
-            # fig, ax = plt.subplots(figsize=(10,10))
-            fig, ax = plt.subplots()
-            cmap = plt.get_cmap("tab10")
+        # Plot eigenfunctions
+        fig, ax = plt.subplots()
+        cmap = plt.get_cmap("tab10")
 
-            for i in range(n_eig_vecs-1, -1, -1):
-                plt.plot(self.x_, self.eig_vecs[:, i], label=f"n = {i+1}", color=cmap(i))
+        for i in range(n_eig_vecs-1, -1, -1):
+            plt.plot(self.x_, self.eig_vecs[:, i], label=f"n = {i+1}", color=cmap(i))
 
-            # Potential
+        # Potential
+        self.plot_insert_potential(fig, ax)
+
+        # Plot second solution with x dots
+        if Schrodinger_2 is not None:
+            for i in range(3, -1, -1):
+                skip = len(Schrodinger_2.x_)//50
+                plt.plot(Schrodinger_2.x_[::skip], Schrodinger_2.eig_vecs[:, i][::skip], 'x', color=cmap(i))
+            
+        plt.title("Eigenfunctions")
+        plt.ylabel("$\Psi(x)$")
+        plt.xlabel("x")
+        plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+        plt.tight_layout()
+        plt.show()
+
+        # Energy levels
+        fig, ax = plt.subplots()
+        text_i = []
+        for i in range(n_eig_vals):
+            plt.hlines(self.eig_vals[i], 0, 1, label=f"eval={self.eig_vals[i]:.2f}")
+
+            # Text
+            if i < n_eig_vals - 1 and abs(self.eig_vals[i] - self.eig_vals[i+1]) < 10:
+                text_i.append(str(i+1))
+            else:
+                text_i.append(str(i+1))
+                plt.text(1.1, self.eig_vals[i]-5, f"n={','.join(text_i)}")
+                text_i = []
+
+        # Potential
+        self.plot_insert_potential(fig, ax, true_size=True)
+        plt.title("Eigenvalues")
+        plt.ylabel(r"$\lambda_n = \frac{2mL^2}{\hbar^2}E_n$")
+        plt.show()
+
+
+        # Task 2.4
+        if plot_vals_n:
+            plt.figure()
+            plt.plot(self.n, self.eig_vals, label="Numerical eigenvalues")
+            plt.plot(self.n, self.lmbda, label="Analytical eigenvalues")
+
+            plt.title("Eigenvalues")
+            plt.xlabel("n")
+            plt.ylabel(r"$\lambda_n = \frac{2mL^2}{\hbar^2}E_n$")
+            plt.legend()
+            plt.show()
+
+    def plot_Psi_0(self):
+        fig, ax = plt.subplots()
+        
+        plt.plot(self.x_, self.Psi_0, label=r"$\Psi_0$")
+
+        # Potential
+        self.plot_insert_potential(fig, ax)
+            
+        plt.title("Initial wavefunction")
+        plt.ylabel("$\Psi(x)$")
+        plt.xlabel("x")
+        plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+        plt.tight_layout()
+        plt.show()
+
+    def plot_insert_potential(self, fig, ax, true_size=False):
+        plt.figure(fig)
+
+        if true_size:
+            y_max = ax.get_ylim()[1]
+            plt.vlines(0, 0, y_max, color='black')
+            plt.vlines(1, 0, y_max, color='black')
+            plt.plot(self.x_, self.pot, color="black")
+        else:
             y_lims = ax.get_ylim()
             plt.vlines(0, *y_lims, linestyles='--', color='black', label=r"V$^*$")
             plt.vlines(1, *y_lims, linestyles='--', color='black')
             plt.plot(self.x_, (self.pot/max(np.max(self.pot), 1)*0.5*y_lims[1]) + y_lims[0], '--', color="black")
 
-            # Plot second solution with x dots
-            if Schrodinger_2 is not None:
-                for i in range(3, -1, -1):
-                    skip = len(Schrodinger_2.x_)//50
-                    plt.plot(Schrodinger_2.x_[::skip], Schrodinger_2.eig_vecs[:, i][::skip], 'x', color=cmap(i))
-                
-            plt.title("Eigenfunctions")
-            plt.ylabel("$\Psi(x)$")
-            plt.xlabel("x")
-            plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
-            plt.tight_layout()
-            plt.show()
-
-            # Energy levels
-            fig, ax = plt.subplots()
-            text_i = []
-            for i in range(n_eig_vals):
-                plt.hlines(self.eig_vals[i], 0, 1, label=f"eval={self.eig_vals[i]:.2f}")
-
-                # Text
-                if i < n_eig_vals - 1 and abs(self.eig_vals[i] - self.eig_vals[i+1]) < 10:
-                    text_i.append(str(i+1))
-                else:
-                    text_i.append(str(i+1))
-                    plt.text(1.1, self.eig_vals[i]-5, f"n={','.join(text_i)}")
-                    text_i = []
-
-            # Potential
-            y_max = ax.get_ylim()[1]
-            plt.vlines(0, 0, y_max, color='black')
-            plt.vlines(1, 0, y_max, color='black')
-            plt.plot(self.x_, self.pot, color="black")
-            plt.title("Eigenvalues")
-            plt.ylabel(r"$\lambda_n = \frac{2mL^2}{\hbar^2}E_n$")
-            plt.show()
-
-
-            # Task 2.4
-            if plot_vals_n:
-                plt.figure()
-                plt.plot(self.n, self.eig_vals, label="Numerical eigenvalues")
-                plt.plot(self.n, self.lmbda, label="Analytical eigenvalues")
-
-                plt.title("Eigenvalues")
-                plt.xlabel("n")
-                plt.ylabel(r"$\lambda_n = \frac{2mL^2}{\hbar^2}E_n$")
-                plt.legend()
-                plt.show()
 
 
 
@@ -293,10 +324,23 @@ def Task_3():
     ## Task 3.2
     # With barrier
     v0 = 1e3
-    S = Schrodinger(L=1, Nx=1000, pot_type="barrier", v0=v0)
+    S = Schrodinger(L=1, Nx=1000, pot_type="barrier", v0=v0, Nt=500)
     S.eigen()
-    S.plot_eig_values(n_eig_vecs=4)
+    # S.plot_eig_values(n_eig_vecs=4)
 
+    ## Task 3.3
+    t1 = time.time()
+    S.init_cond(name="eigenfuncs", eigenfunc_idxs=[0, 2])
+    S.plot_Psi_0()
+    # Update end time
+    S.T = np.pi / (S.eig_vals[1] - S.eig_vals[0])
+    # Discretize t again
+    S.discretize_x_t()
+    # Evolve
+    S.evolve()
+    t2 = time.time()
+    print(f'Time: {t2 - t1}')
+    
 
 
 if __name__ == '__main__':
