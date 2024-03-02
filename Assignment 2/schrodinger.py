@@ -191,7 +191,7 @@ class Schrodinger:
         if plot:
             plt.figure()
             for i in range(5):
-                plt.plot(self.x_, Psi[Psi.shape[0]//5*i], label=f"t={self.t_[Psi.shape[0]//5*i]:.2e}")
+                plt.plot(self.x_, np.real(Psi[Psi.shape[0]//5*i]), label=f"t={self.t_[Psi.shape[0]//5*i]:.2e}")
             plt.legend()
             plt.show()
 
@@ -330,10 +330,10 @@ def Task_3():
 
     ## Task 3.3
     t1 = time.time()
-    S.init_cond(name="eigenfuncs", eigenfunc_idxs=[0, 2])
+    S.init_cond(name="eigenfuncs", eigenfunc_idxs=[0,2])
     S.plot_Psi_0()
     # Update end time
-    S.T = np.pi / (S.eig_vals[1] - S.eig_vals[0])
+    S.T = np.pi / (S.eig_vals[1] - S.eig_vals[0]) * S.t0
     # Discretize t again
     S.discretize_x_t()
     # Evolve
