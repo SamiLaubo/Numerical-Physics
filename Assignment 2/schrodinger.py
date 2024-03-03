@@ -356,6 +356,37 @@ class Schrodinger:
         last_zero = np.where(lmbda_under>0)[0][0]-1
         return v0[last_zero], v0[last_zero+1]
 
+    # Task 3.7
+    def forward_euler(self):
+        Psi = np.zeros((self.Nt, self.Nx), dtype=np.complex128)
+
+        # Initial condition
+        Psi[0] = self.Psi_0
+
+        # Create matrix
+        A = np.zeros((self.Nx, self.Nx), dtype=np.complex128)
+        np.fill_diagonal(A, -2 - self.dx_**2 * self.pot)
+        np.fill_diagonal(A[1:], 1)
+        np.fill_diagonal(A[:, 1:], 1)
+        A /= -self.dx_**2
+        A *= 1j*self.dt_
+        A = 1 - A
+
+        for i in range(self.Nt-1):
+            Psi[i+1] = A @ Psi[i]
+
+            # Normalize
+            # Psi[i+1] /= np.sqrt(np.trapz(np.conj(Psi[i+1])*Psi[i+1]))
+
+
+        # Plot Psi
+        plt.figure()
+        for i in range(2):
+            Prob_dens = np.conj(Psi[Psi.shape[0]//5*i]) * Psi[Psi.shape[0]//5*i]
+            plt.plot(self.x_, Prob_dens, label=f"t={self.t_[Psi.shape[0]//5*i]:.2e}")
+        plt.legend()
+        plt.show()
+
 
 
 
@@ -397,8 +428,8 @@ def Task_3():
 
     ## Task 3.2
     # With barrier
-    # v0 = 1e3
-    # S = Schrodinger(L=1, Nx=1000, pot_type="barrier", v0=v0, Nt=100)
+    v0 = 1e3
+    S = Schrodinger(L=1, Nx=1000, pot_type="barrier", v0=v0, Nt=100)
     # S.eigen()
     # # S.plot_eig_values(n_eig_vecs=4)
 
@@ -433,6 +464,21 @@ def Task_3():
     # for _ in range(10):
     #     print(f'{v0_low, v0_high = }')
     #     v0_low, v0_high = S.eigvals_under_barrier(v0_low=v0_low, v0_high=v0_high, N=10)
+    
+
+    ## Task 3.7
+    v0 = 1e3
+    S = Schrodinger(pot_type="barrier", v0=v0, Nt=10)
+    S.eigen()
+    S.init_cond(name="eigenfuncs", eigenfunc_idxs=[1])
+    S.plot_Psi_0()
+    # # Update end time
+    # S.T = np.pi * S.t0 #/ (S.eig_vals[1]) * S.t0
+    S.T = 1 * S.dx_**2# * S.t0
+    # # Discretize t again
+    S.discretize_x_t()
+    print(f'{S.dt_/S.dx_**2 = }')
+    S.forward_euler()
 
     
 
