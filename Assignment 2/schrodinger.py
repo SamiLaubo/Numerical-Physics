@@ -143,7 +143,7 @@ class Schrodinger:
 
     # Task 2.7
     def alpha_n(self, Psi_n, Psi_0):
-        return np.trapz(Psi_n*Psi_0)
+        return np.trapz(Psi_n*Psi_0, self.x_)
     
     def check_orthogonality(self):
         eig_vals, eig_vecs = self.load_eigs(all=False)
@@ -182,17 +182,18 @@ class Schrodinger:
         # Evolve
         if plot:
             # @njit
-            def f(Nt, Nx, t_, eig_vals, eig_vecs):
+            def f(Nt, Nx, t_, eig_vals, eig_vecs, x_):
                 Psi = np.zeros((Nt, Nx), dtype=np.complex128)
                 for idx, t in enumerate(t_):
                     Psi[idx] = np.sum(alpha * np.exp(-1j*eig_vals*t) * eig_vecs, axis=1)
 
                     # Normalize
-                    Psi[idx] /= np.sqrt(np.trapz(Psi[idx]*np.conj(Psi[idx])))
+                    print("Does not normalize properly, should add x_ to np.trapz")
+                    Psi[idx] /= np.sqrt(np.trapz(np.conj(Psi[idx]*Psi[idx], x_)))
                 
                 return Psi
             
-            Psi = f(self.Nt, self.Nx, self.t_, self.eig_vals, self.eig_vecs)
+            Psi = f(self.Nt, self.Nx, self.t_, self.eig_vals, self.eig_vecs, self.x_)
 
             # Plot Psi
             plt.figure()
@@ -219,7 +220,7 @@ class Schrodinger:
             def anim_func(i):
                 # Calculate and normalize
                 Psi = np.sum(alpha * np.exp(-1j*self.eig_vals*self.t_[i]) * self.eig_vecs, axis=1)
-                Psi /= np.sqrt(np.trapz(Psi*np.conj(Psi)))
+                Psi /= np.sqrt(np.trapz(np.conj(Psi)*Psi, self.x_))
 
                 line.set_ydata(np.conj(Psi)*Psi)
                 new_label = r"t'=" + f"{self.t_[i]:.2f}s"
@@ -370,18 +371,18 @@ class Schrodinger:
         np.fill_diagonal(A[:, 1:], 1)
         A /= -self.dx_**2
         A *= 1j*self.dt_
-        A = 1 - A
+        # A = 1 - A
 
         for i in range(self.Nt-1):
-            Psi[i+1] = A @ Psi[i]
+            Psi[i+1] = Psi[i] - A @ Psi[i]
 
             # Normalize
-            # Psi[i+1] /= np.sqrt(np.trapz(np.conj(Psi[i+1])*Psi[i+1]))
+            Psi[i+1] /= np.sqrt(np.trapz(np.conj(Psi[i+1])*Psi[i+1], self.x_))
 
 
         # Plot Psi
         plt.figure()
-        for i in range(2):
+        for i in range(5):
             Prob_dens = np.conj(Psi[Psi.shape[0]//5*i]) * Psi[Psi.shape[0]//5*i]
             plt.plot(self.x_, Prob_dens, label=f"t={self.t_[Psi.shape[0]//5*i]:.2e}")
         plt.legend()
@@ -473,8 +474,10 @@ def Task_3():
     S.init_cond(name="eigenfuncs", eigenfunc_idxs=[1])
     S.plot_Psi_0()
     # # Update end time
-    # S.T = np.pi * S.t0 #/ (S.eig_vals[1]) * S.t0
-    S.T = 1 * S.dx_**2# * S.t0
+    # S.T = np.pi / (S.eig_vals[1]) * S.t0
+
+    # Fiddle with 100 to see when it fucks up
+    S.T = 100 * S.dx_**2 * S.t0
     # # Discretize t again
     S.discretize_x_t()
     print(f'{S.dt_/S.dx_**2 = }')
@@ -499,6 +502,7 @@ if __name__ == '__main__':
 # Questions:
     # Task 3.3: Initial cond psi n=1,3?
     # Task 3.3: No tunneling
+    # Task 3.7: Normalisere etter hver loop?
 
 
 # Sammenligne res:
