@@ -442,7 +442,7 @@ class Schrodinger:
 
         # Psi_0
         line, = ax.plot(self.x_, self.Psi_0, label=r"t'=0.00s")
-        self.plot_insert_potential(fig, ax, pad=0.001)
+        self.plot_insert_potential(fig, ax, pad=1)
         legend = plt.legend(loc="upper center")
 
         # Make title        
