@@ -16,13 +16,14 @@ from functools import partial
 import root_finder
 
 class Schrodinger:
-    def __init__(self, L=1, Nx=1000, Nt=1, T=1, m=1, pot_type="well", v0=0) -> None:
+    def __init__(self, L=1, Nx=1000, Nt=1, T=1, m=1, pot_type="well", v0=0, vr=0) -> None:
         # Values
         self.L = L
         self.T = T
         self.m = m
         self.pot_type = pot_type
         self.v0 = v0
+        self.vr = vr
 
         self.x0 = L
         self.t0 = 2*m*L**2 / hbar
@@ -56,13 +57,26 @@ class Schrodinger:
         
         # Infinite well with zero pot and v0 barrier in the middle
         #
-        #   |            |
-        #   |     __     |
-        #   |____|  |____|
+        #   |              |
+        #   |     ____     |
+        #   |____| v0 |____|
         #
         elif self.pot_type == "barrier":
             self.pot = np.zeros_like(self.x_)
             self.pot[len(self.pot)//3:2*len(self.pot)//3] = self.v0
+
+
+        # Infinite well with zero pot and v0 and vr barriers in the middle
+        #
+        #   |          ____| 
+        #   |     ____|    |
+        #   |____| v0 | vr |
+        #
+        elif self.pot_type == "detuning":
+            self.pot = np.zeros_like(self.x_)
+            self.pot[len(self.pot)//3:2*len(self.pot)//3] = self.v0
+            self.pot[2*len(self.pot)//3:] = self.vr
+            
 
     def update_Nx(self, new_Nx):
         self.Nx = new_Nx
@@ -227,7 +241,7 @@ class Schrodinger:
             self.plot_insert_potential(fig, ax, pad=0.001)
             legend = plt.legend(loc="upper center")
             plt.title("Probability density\n" + r"\Psi_0 = $(\Psi_1 + \Psi_2)/\sqrt{2}$")
-            plt.xlabel("x'")
+            plt.xlabel(r"$x'$")
             plt.ylabel(r"$|\Psi(x', t')|^2$")
 
             def anim_func(i):
@@ -277,7 +291,7 @@ class Schrodinger:
             
         plt.title("Eigenfunctions")
         plt.ylabel("$\Psi(x')$")
-        plt.xlabel("x'")
+        plt.xlabel("$x'$")
         plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
         plt.tight_layout()
         plt.show()
@@ -310,7 +324,7 @@ class Schrodinger:
             plt.plot(self.n, self.lmbda, label="Analytical eigenvalues")
 
             plt.title("Eigenvalues")
-            plt.xlabel("n")
+            plt.xlabel("$n$")
             plt.ylabel(r"$\lambda_n = \frac{2mL^2}{\hbar^2}E_n$")
             plt.legend()
             plt.show()
@@ -325,7 +339,7 @@ class Schrodinger:
             
         plt.title("Initial wavefunction\n" + self.Psi_0_text)
         plt.ylabel("$\Psi(x')$")
-        plt.xlabel("x'")
+        plt.xlabel("$x'$")
         plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
         plt.tight_layout()
         plt.show()
@@ -485,6 +499,157 @@ class Schrodinger:
         plt.close()
 
 
+    # Task 4.1
+    def detuning_Vr_dependence(self, vr_low, vr_high, N=100):
+
+        eigenvalues_0 = np.zeros(N)
+        eigenvalues_1 = np.zeros(N)
+        vr = np.linspace(vr_low, vr_high, N)
+
+        for i in range(N):
+            # Set potential
+            self.vr = vr[i]
+
+            # Discretize potential again
+            self.discretize_pot()
+
+            # Get eigenvalues
+            self.eigen()
+
+            # Save
+            eigenvalues_0[i] = self.eig_vals[0]
+            eigenvalues_1[i] = self.eig_vals[1]
+
+        # Plot
+        plt.figure()
+        plt.title("Two lowest eigenvalues for detuning")
+        plt.xlabel(r"$\nu_r=\frac{2mL^2}{\hbar^2}\cdot V$")
+        plt.ylabel(r"$\lambda_n = \frac{2mL^2}{\hbar^2}E_n$")
+
+        plt.plot(vr, eigenvalues_0, label=r"$\lambda_0$")
+        plt.plot(vr, eigenvalues_1, label=r"$\lambda_1$")
+
+        plt.legend()
+        plt.show()
+
+    # Task 4.2
+    def tunneling_amplitude(self, vr_low, vr_high, N=100):
+
+        tau = np.zeros(N)
+        vr = np.linspace(vr_low, vr_high, N)
+
+        for i in range(N):
+            # Set potential
+            self.vr = vr[i]
+
+            # Discretize potential again
+            self.discretize_pot()
+
+            # Get eigenvalues
+            self.eigen()
+
+            # Calculate tau
+            H = np.zeros((self.Nx, self.Nx))
+            np.fill_diagonal(H, -2 - self.dx_**2 * self.pot)
+            np.fill_diagonal(H[1:], 1)
+            np.fill_diagonal(H[:, 1:], 1)
+            H /= -self.dx_**2
+
+            tau[i] = np.trapz(self.eig_vecs[0] * (H @ self.eig_vecs[1]), self.x_)
+
+        # Plot
+        plt.figure()
+        plt.title("Tunneling amplitude")
+        plt.xlabel(r"$\nu_r$")
+        plt.ylabel(r"$\tau(\nu_r)$")
+
+        plt.plot(vr, tau, label=r"$\tau$")
+
+        # Fit linear regression
+        slope, intercept = np.polyfit(vr, tau, 1)
+        plt.plot(vr, slope*vr + intercept, '--', label="Linear regression", color="black")
+
+        print(f'tau(vr) = {slope} * vr + {intercept}')
+
+        plt.legend()
+        plt.show()
+
+    # Task 4.4
+    def Rabi_oscillations(self):
+
+        # Calculate epsilon_0
+        self.vr = 0
+        self.discretize_pot()
+        self.eigen()
+
+        epsilon_0 = self.eig_vals[1] - self.eig_vals[0]
+        omega = epsilon_0
+        tau = 0.02 * epsilon_0
+        f = np.zeros((2, self.Nt), dtype=np.complex128)
+
+        # States
+        g0 = np.array([1, 0], dtype=np.complex128).T # Ground state
+        e0 = np.array([0, 1], dtype=np.complex128).T # First excited state
+
+        # Matrices
+        M = np.ones((2,2), dtype=np.complex128)
+        N = np.zeros((2,2), dtype=np.complex128)
+
+        # Helper constants
+        N_const = -1j*self.dt_ / hbar * tau
+        M_const = -N_const / 2
+        exp_const = 1j*epsilon_0/hbar
+
+        # Set initial condition to ground state
+        f[:, 0] = g0 # Since t=0 gives N=0
+
+        # Keep sum
+        Nf_sum = np.zeros((2,), dtype=np.complex128)
+        sin = 0
+        exp_pos = 0
+        exp_neg = 0
+
+        for k in range(1, f.shape[1]):
+            if k == 1:
+                Nf_sum += f[:, 0]
+
+            else:
+                # N uses previous sin and exp_
+                N[1, 0] = N_const * sin * exp_pos
+                N[0, 1] = N_const * sin * exp_neg
+
+                # Add to sum
+                Nf_sum += N @ f[:, k-1]
+
+            # Update values
+            sin = np.sin(omega * self.t_[k])
+            exp_pos = np.exp(exp_const*self.t_[k])
+            exp_neg = np.exp(-exp_const*self.t_[k])
+            
+            # Update M
+            M[1, 0] = 1 + M_const * sin * exp_pos
+            M[0, 1] = 1 + M_const * sin * exp_neg
+
+            f[:, k] = np.linalg.solve(M, Nf_sum)
+
+            # Normalize
+            # f[:, k] /= np.sqrt(np.sum(np.conj(f[:, k])*f[:, k]))
+
+        # Find probabilities for system to be in state e0
+        # Normalize
+        # f /= np.sqrt(np.sum(np.conj(f)*f, axis=0))
+        prob = e0 @ f
+        # prob /= np.sqrt(np.sum(np.conj(prob)*prob, axis=0))
+        prob = np.conj(prob)*prob
+
+        # Plot
+        plt.figure()
+        plt.plot(self.t_, prob, label="Numerical")
+        plt.plot(self.t_, np.sin(self.t_*tau/(2*hbar))**2, '--', label="Analytical")
+
+        plt.legend()
+        plt.show()
+
 
 def Task_2():
     # Create class
@@ -582,19 +747,63 @@ def Task_3():
     S.forward_scheme(method="Crank Nicolson", plot=False, animate=True)
 
     
+def Task_4():
+
+    ## Task 4.1
+    # v0 = 100
+    # vr_low = -1e3
+    # vr_high = 1e3
+    # S = Schrodinger(pot_type="detuning", v0=v0, Nt=10, vr=0)
+    # S.eigen()
+    # S.init_cond(name="eigenfuncs", eigenfunc_idxs=[1])
+    # S.plot_Psi_0()
+
+    # Energy difference
+    # print(f'epsilon_0 = {S.eig_vals[1] - S.eig_vals[0]}')
+
+    # S.detuning_Vr_dependence(vr_low=vr_low, vr_high=vr_high)
+
+    ## Task 4.2
+    # S.tunneling_amplitude(vr_low=vr_low, vr_high=vr_high, N=100)
+
+    # tau(vr) = -0.3140942438188899 * vr + -1.0424101057055188
+
+    ## Task 4.4
+    t1 = time.time()
+    v0 = 100
+    S = Schrodinger(pot_type="detuning", v0=v0, Nt=1000)
+    
+    # Calculate a reasonable time
+    S.eigen()
+    epsilon_0 = S.eig_vals[1] - S.eig_vals[0]
+    tau = 0.02 * epsilon_0
+    S.T = 12*np.pi*hbar/tau * S.t0
+    
+    # Discretize again
+    S.discretize_x_t()
+    S.discretize_pot()
+
+    # Run function
+    S.Rabi_oscillations()
+    t2 = time.time()
+    print(f'Time: {t2 - t1}')
+
+    
 
 
 if __name__ == '__main__':
     # Task_2()
 
-    Task_3()
+    # Task_3()
 
+    Task_4()
 
 
 
 # TODO:
     # Fix same size for Nx in loaded eigvals and Psi_0: is correct for 1000
     # Move mains to new py file
+    # check that disc_x_t comes before
 
 
 # Questions:
