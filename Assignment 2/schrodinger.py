@@ -1,18 +1,13 @@
 # Created by Sami Laubo 26.02.2024
 
-# %load_ext autoreload
-# %autoreload 2
+import os
+import glob
 
 import numpy as np
-import matplotlib.pyplot as plt
-from numba import njit
-import glob
-import matplotlib.animation as animation
-from scipy.constants import hbar
-import os
 from functools import partial
-
-import root_finder
+from scipy.constants import hbar
+import matplotlib.pyplot as plt
+import matplotlib.animation as animation
 
 class Schrodinger:
     def __init__(self, L=1, Nx=1000, Nt=1, T=1, m=1, pot_type="well", v0=0, vr=0) -> None:
@@ -121,7 +116,7 @@ class Schrodinger:
             self.update_Nx(Nx[i])
 
             # Get eigenvalues
-            self.eigen(save=save, plot=False)
+            self.eigen(save=save)
 
             # Root-Mean-Square-Deviation (RMSE)
             eigval_error[i] = np.sqrt(np.sum((self.eig_vals - self.lmbda)**2) / len(self.eig_vals))
@@ -156,15 +151,28 @@ class Schrodinger:
         return eig_vals, eig_vecs
 
     # Task 2.7
-    def alpha_n(self, Psi_n, Psi_0):
-        return np.trapz(Psi_n*Psi_0, self.x_)
+    def alpha_n(self, Psi_n, Psi_0, x_=None):
+        if x_ is not None:
+            return np.trapz(Psi_n*Psi_0, x_)
+        else:
+            return np.trapz(Psi_n*Psi_0, self.x_)
     
     def check_orthogonality(self):
         eig_vals, eig_vecs = self.load_eigs(all=False)
+        x_ = np.linspace(0, 1, len(eig_vals))
         
-        for i in range(min(eig_vecs.shape[1], 20)):
-            for j in range(i+1, min(eig_vecs.shape[1], 20)):
-                print(f'{self.alpha_n(eig_vecs[i], eig_vecs[j]) = }')
+        all_less = True
+        for i in range(min(eig_vecs.shape[1], 10)):
+            for j in range(i+1, min(eig_vecs.shape[1], 10)):
+                a_n = self.alpha_n(eig_vecs[:, i], eig_vecs[:, j], x_=x_)
+
+                if a_n > 1e-10:
+                    all_less = False
+                    print(f'alpha_n over threshold (1e-10) for i, j = {i}, {j}: {a_n}')
+
+        if all_less:
+            print("All alpha_n were less than 1e-10")
+
 
     # Task 2.10
     def init_cond(self, name="psi_1", eigenfunc_idxs=[]):
@@ -215,7 +223,7 @@ class Schrodinger:
                     Psi[idx] = np.sum(alpha * np.exp(-1j*eig_vals*t) * eig_vecs, axis=1)
 
                     # Normalize
-                    Psi[idx] /= np.sqrt(np.trapz(np.conj(Psi[idx]*Psi[idx], x_)))
+                    Psi[idx] /= np.sqrt(np.trapz(np.conj(Psi[idx])*Psi[idx], x_))
                 
                 return Psi
             
@@ -268,6 +276,7 @@ class Schrodinger:
             if os.path.exists(path):
                 os.remove(path)
             anim.save(path, fps=60)
+            print(f"Animation saved to {path}")
             plt.close()
 
     def plot_eig_values(self, Schrodinger_2=None, n_eig_vecs=4, n_eig_vals=10, plot_vals_n=False):
@@ -358,7 +367,7 @@ class Schrodinger:
             plt.plot(self.x_, (self.pot/max(np.max(self.pot), 1)*0.5*y_lims[1]) + y_lims[0] + pad, '--', color="black")
 
     # Task 3.6
-    def eigvals_under_barrier(self, v0_low, v0_high, N):
+    def eigvals_under_barrier(self, v0_low, v0_high, N, plot=True):
         v0 = np.linspace(v0_low, v0_high, N)
         lmbda_under = np.zeros_like(v0)
 
@@ -372,12 +381,13 @@ class Schrodinger:
             lmbda_under[i] = np.where(self.eig_vals > v00)[0][0]
 
         # Plot
-        plt.figure()
-        plt.plot(v0, lmbda_under)
-        plt.xlabel(r"$\nu_0 = \frac{2mL^2}{\hbar^2}\cdot V_0$")
-        plt.ylabel("Count")
-        plt.title("Number of eigenvalues less than barrier height")
-        plt.show()
+        if plot:
+            plt.figure()
+            plt.plot(v0, lmbda_under)
+            plt.xlabel(r"$\nu_0 = \frac{2mL^2}{\hbar^2}\cdot V_0$")
+            plt.ylabel("Count")
+            plt.title("Number of eigenvalues less than barrier height")
+            plt.show()
 
         # Return value where #lmbda shifts to 1
         last_zero = np.where(lmbda_under>0)[0][0]-1
@@ -495,6 +505,7 @@ class Schrodinger:
         if not os.path.exists("/".join(path.split("/")[:-1])):
             os.makedirs("/".join(path.split("/")[:-1]))
         anim.save(path, fps=10)
+        print(f"Animation saved to {path}")
         plt.close()
 
 
