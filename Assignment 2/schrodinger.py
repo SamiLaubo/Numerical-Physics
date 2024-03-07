@@ -104,9 +104,9 @@ class Schrodinger:
             np.save(f"output/t24_eigs/eigvec_dx_{self.dx_}", self.eig_vecs)
 
 
-    def eigval_error_dx(self, Nx_low, Nx_high, N, save=False):
+    def eigvec_error_dx(self, Nx_low, Nx_high, N, num_eigvecs=10, save=False):
         # Arrays to save results
-        eigval_error = np.zeros(N)
+        eigvec_error = np.zeros((num_eigvecs, N))
         Nx = np.linspace(Nx_low, Nx_high, N, dtype=np.int32)
 
         # Loop through Nx (dx)
@@ -118,12 +118,30 @@ class Schrodinger:
             # Get eigenvalues
             self.eigen(save=save)
 
+            # Analytical solution
+            psi_analytical = self.x_.repeat(num_eigvecs).reshape(len(self.x_), num_eigvecs)
+            psi_analytical *= np.pi * (np.arange(num_eigvecs)+1)
+            psi_analytical = np.sqrt(2) * np.sin(psi_analytical)
+
+            # Calculate error of probability RMSE
+            eigvec_error[:, i] = np.sqrt(np.sum((self.eig_vecs[:, :num_eigvecs]**2 - psi_analytical**2)**2, axis=0)/psi_analytical.shape[0])
+
+
+            # if i < 10:
+            #     plt.figure()
+            #     plt.plot(self.x_, self.eig_vecs[:, i])
+            #     plt.plot(self.x_, np.sqrt(2)*np.sin((i+1)*np.pi*self.x_), '--')
+            #     plt.show()
+
             # Root-Mean-Square-Deviation (RMSE)
-            eigval_error[i] = np.sqrt(np.sum((self.eig_vals - self.lmbda)**2) / len(self.eig_vals))
+            # eigval_error[i] = np.sqrt(np.sum((self.eig_vals - self.lmbda)**2) / len(self.eig_vals))
+
+        
 
         plt.figure()
-        plt.plot(1 / (Nx-1), eigval_error)
-        plt.title("Eigenvalue error")
+        for i in range(num_eigvecs):
+            plt.plot(1 / (Nx-1), eigvec_error[i])
+        plt.title("Eigenvector error")
         plt.xlabel(r"$\Delta x$")
         plt.ylabel("RMSE")
         plt.show()

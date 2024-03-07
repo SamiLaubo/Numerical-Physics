@@ -9,15 +9,15 @@ from schrodinger import *
 import root_finder
 
 # Choose tasks to run
-TASK_2 = False
+TASK_2 = True
 TASK_3 = False
-TASK_4 = True
+TASK_4 = False
 
 # Subtasks (only if super is true)
-TASK_2_4 = True
+TASK_2_4 = False
 TASK_2_5 = True
-TASK_2_7 = True
-TASK_2_10 = True
+TASK_2_7 = False
+TASK_2_10 = False
 
 TASK_3_1 = True
 TASK_3_2 = True
@@ -52,7 +52,7 @@ def Task_2():
         t1 = time.time(); print("\nTask 2.5")
 
         # Plot how the error in eigenvalues increase with dx
-        S.eigval_error_dx(Nx_low=50, Nx_high=1000, N=20, save=True)
+        S.eigvec_error_dx(Nx_low=20, Nx_high=1000, N=100, save=False)
         
         t2 = time.time(); print(f'\nTask 2.5 time: {t2 - t1:.4e}')
 
@@ -290,4 +290,5 @@ if __name__ == '__main__':
 
 
 # Sammenligne res:
+    # Task 2.5 - Error kurve
     # Task 3.5 - Root values vs eigenvalues
