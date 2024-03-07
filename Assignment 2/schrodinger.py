@@ -1,13 +1,12 @@
 # Created by Sami Laubo 26.02.2024
 
-%load_ext autoreload
-%autoreload 2
+# %load_ext autoreload
+# %autoreload 2
 
 import numpy as np
 import matplotlib.pyplot as plt
 from numba import njit
 import glob
-import time
 import matplotlib.animation as animation
 from scipy.constants import hbar
 import os
@@ -627,13 +626,13 @@ class Schrodinger:
             exp_neg = np.exp(-exp_const*self.t_[k])
             
             # Update M
-            M[1, 0] = 1 + M_const * sin * exp_pos
-            M[0, 1] = 1 + M_const * sin * exp_neg
+            M[0, 1] = 1 + M_const * sin * exp_pos
+            M[1, 0] = 1 + M_const * sin * exp_neg
 
             f[:, k] = np.linalg.solve(M, Nf_sum)
 
             # Normalize
-            # f[:, k] /= np.sqrt(np.sum(np.conj(f[:, k])*f[:, k]))
+            f[:, k] /= np.sqrt(np.sum(np.conj(f[:, k])*f[:, k]))
 
         # Find probabilities for system to be in state e0
         # Normalize
@@ -649,168 +648,3 @@ class Schrodinger:
 
         plt.legend()
         plt.show()
-
-
-def Task_2():
-    # Create class
-    S = Schrodinger(L=1, Nx=1000, Nt=100, T=1e8)
-
-    # Task 2.4
-    S.eigen(plot=True)
-    S.plot_eig_values(plot_vals_n=True)
-
-    # Task 2.5
-    t1 = time.time()
-    S.eigval_error_dx(Nx_low=50, Nx_high=1000, N=20, save=True)
-    t2 = time.time()
-    print(f'Time: {t2 - t1}')
-
-    # Task 2.7
-    # S.check_orthogonality()
-
-    ## Task 2.10
-    # Set initial condition to first eigen function
-    S.init_cond(name="delta")
-    t1 = time.time()
-    S.evolve()
-    t2 = time.time()
-    print(f'Time: {t2 - t1}')
-
-
-def Task_3():
-    ## Task 3.1
-    # Check if barrier potential gives well when v0=0
-    # S_well = Schrodinger(L=1, Nx=1000, pot_type="well")
-    # S_barrier = Schrodinger(L=1, Nx=1000, pot_type="barrier", v0=0)
-
-    # S_well.eigen()
-    # S_barrier.eigen()
-    # S_well.plot_eig_values(S_barrier)
-
-    ## Task 3.2
-    # With barrier
-    # v0 = 1e3
-    # S = Schrodinger(L=1, Nx=1000, pot_type="barrier", v0=v0, Nt=100)
-    # S.eigen()
-    # # S.plot_eig_values(n_eig_vecs=4)
-
-    # # ## Task 3.3
-    # t1 = time.time()
-    # S.init_cond(name="eigenfuncs", eigenfunc_idxs=[1,2])
-    # S.plot_Psi_0()
-    # # Update end time
-    # S.T = np.pi / (S.eig_vals[2] - S.eig_vals[1]) * S.t0
-    # # Discretize t again
-    # S.discretize_x_t()
-    # # Evolve
-    # S.evolve(plot=False, animate=True)
-    # t2 = time.time()
-    # print(f'Time: {t2 - t1}')
-
-    ## Task 3.4
-    # Root finding
-    # Plot function
-    # root_finder.plot_f(v0, eig_vals=S.eig_vals[:np.where(S.eig_vals>v0)[0][0]])
-
-    ## Task 3.5
-    # Find root values
-    # root_finder.find_roots(v0, eig_vals=S.eig_vals[:np.where(S.eig_vals>v0)[0][0]])
-
-    ## Task 3.6
-    # S = Schrodinger(pot_type="barrier")
-    # # S.eigvals_under_barrier(v0_low=0, v0_high=1e5, N=10)
-
-    # # Find value where #lambda 0->1
-    # v0_low, v0_high = 22, 23
-    # for _ in range(10):
-    #     print(f'{v0_low, v0_high = }')
-    #     v0_low, v0_high = S.eigvals_under_barrier(v0_low=v0_low, v0_high=v0_high, N=10)
-    
-
-    ## Task 3.7
-    v0 = 1e3
-    S = Schrodinger(pot_type="barrier", v0=v0, Nt=10)
-    S.eigen()
-    S.init_cond(name="eigenfuncs", eigenfunc_idxs=[1])
-    # S.plot_Psi_0()
-    # Update end time
-    # S.T = np.pi / (S.eig_vals[1]) * S.t0
-
-    # Fiddle with 100 to see when it messes up
-    S.T = 1 * S.dx_**2 * S.t0
-    # Discretize t again
-    S.discretize_x_t()
-    print(f'{S.dt_/S.dx_**2 = }')
-    # S.forward_scheme(method="Forward Euler", plot=False, animate=True)
-
-    ## Task 3.9
-    S.forward_scheme(method="Crank Nicolson", plot=False, animate=True)
-
-    
-def Task_4():
-
-    ## Task 4.1
-    # v0 = 100
-    # vr_low = -1e3
-    # vr_high = 1e3
-    # S = Schrodinger(pot_type="detuning", v0=v0, Nt=10, vr=0)
-    # S.eigen()
-    # S.init_cond(name="eigenfuncs", eigenfunc_idxs=[1])
-    # S.plot_Psi_0()
-
-    # Energy difference
-    # print(f'epsilon_0 = {S.eig_vals[1] - S.eig_vals[0]}')
-
-    # S.detuning_Vr_dependence(vr_low=vr_low, vr_high=vr_high)
-
-    ## Task 4.2
-    # S.tunneling_amplitude(vr_low=vr_low, vr_high=vr_high, N=100)
-
-    # tau(vr) = -0.3140942438188899 * vr + -1.0424101057055188
-
-    ## Task 4.4
-    t1 = time.time()
-    v0 = 100
-    S = Schrodinger(pot_type="detuning", v0=v0, Nt=1000)
-    
-    # Calculate a reasonable time
-    S.eigen()
-    epsilon_0 = S.eig_vals[1] - S.eig_vals[0]
-    tau = 0.02 * epsilon_0
-    S.T = 12*np.pi*hbar/tau * S.t0
-    
-    # Discretize again
-    S.discretize_x_t()
-    S.discretize_pot()
-
-    # Run function
-    S.Rabi_oscillations()
-    t2 = time.time()
-    print(f'Time: {t2 - t1}')
-
-    
-
-
-if __name__ == '__main__':
-    # Task_2()
-
-    # Task_3()
-
-    Task_4()
-
-
-
-# TODO:
-    # Fix same size for Nx in loaded eigvals and Psi_0: is correct for 1000
-    # Move mains to new py file
-    # check that disc_x_t comes before
-
-
-# Questions:
-    # Task 3.3: Initial cond psi n=1,3?
-    # Task 3.3: No tunneling
-    # Task 3.7: Normalisere etter hver loop?
-
-
-# Sammenligne res:
-    # Task 3.5 - Root values vs eigenvalues
