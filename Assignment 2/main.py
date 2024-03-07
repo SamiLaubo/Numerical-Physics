@@ -9,16 +9,16 @@ from schrodinger import *
 import root_finder
 
 # Choose tasks to run
-TASK_2 = True
-TASK_3 = False
+TASK_2 = False
+TASK_3 = True
 TASK_4 = False
 
 # Subtasks (only if super is true)
 TASK_2_4 = False
 TASK_2_5 = False
 TASK_2_7 = False
-TASK_2_10 = True
-TASK_2_11 = True
+TASK_2_10 = False
+TASK_2_11 = False
 
 TASK_3_1 = True
 TASK_3_2 = True
@@ -127,17 +127,17 @@ def Task_3():
         v0 = 1e3
         S = Schrodinger(L=1, Nx=1000, pot_type="barrier", v0=v0, Nt=100)
         S.eigen()
-        S.init_cond(name="eigenfuncs", eigenfunc_idxs=[1,2])
+        S.init_cond(name="eigenfuncs", eigenfunc_idxs=[1,3])
         S.plot_Psi_0()
 
         # Update end time
-        S.T = np.pi / (S.eig_vals[2] - S.eig_vals[1]) * S.t0
+        S.T = np.pi / (S.eig_vals[3] - S.eig_vals[1]) * S.t0
 
         # Discretize t again
         S.discretize_x_t()
 
         # Evolve
-        S.evolve(plot=False, animate=True)
+        S.evolve(plot=False, animate=True, path="output/t33_prob_dens/prob_dens.gif")
         
         t2 = time.time(); print(f'Task 3.3 time: {t2 - t1:.4e}')
 
@@ -292,8 +292,9 @@ if __name__ == '__main__':
 
 # TODO:
     # Fix same size for Nx in loaded eigvals and Psi_0: is correct for 1000
-    # Move mains to new py file
     # check that disc_x_t comes before
+    # Fix potential plot in Forward euler og Crank
+    # 3.8-3.9
 
 
 # Questions:
@@ -305,3 +306,4 @@ if __name__ == '__main__':
 
 # Sammenligne res:
     # Task 3.5 - Root values vs eigenvalues
+    # 3.8-3.9

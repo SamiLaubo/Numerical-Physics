@@ -193,9 +193,15 @@ class Schrodinger:
         # Create initial function
         if name == "psi_0":
             self.Psi_0 =  np.sqrt(2) * np.sin(np.pi * self.x_)
+
+            self.Psi_0_text = r"$\Psi_0 = \sqrt{2}\sin{\pi x'}$"
+            
         elif name == "delta":
             self.Psi_0 = np.zeros_like(self.x_)
             self.Psi_0[len(self.Psi_0)//2] = 1 / self.dx_
+
+            self.Psi_0_text = r"$\Psi_0 = \delta (x' - 1/2)$"
+
         elif name == "eigenfuncs":
             self.Psi_0 = np.zeros_like(self.x_)
 
@@ -219,7 +225,7 @@ class Schrodinger:
 
 
 
-    def evolve(self, plot=True, animate=False, start_idx_plot=0):
+    def evolve(self, plot=True, animate=False, start_idx_plot=0, path=""):
         # Load eigenvalues and vectors
         # eig_vals, eig_vecs = self.load_eigs()
         alpha = np.zeros(len(self.eig_vals))
@@ -245,6 +251,9 @@ class Schrodinger:
 
             # Plot Psi
             plt.figure()
+            plt.title("Probability density\n" + self.Psi_0_text)
+            plt.xlabel(r"$x'$")
+            plt.ylabel(r"$|\Psi(x', t')|^2$")
             for i in range(start_idx_plot,5):
                 Prob_dens = np.conj(Psi[Psi.shape[0]//5*i]) * Psi[Psi.shape[0]//5*i]
                 plt.plot(self.x_, Prob_dens, label=f"t={self.t_[Psi.shape[0]//5*i]:.2e}")
@@ -255,13 +264,13 @@ class Schrodinger:
         # Animation
         if animate:
             fig, ax = plt.subplots()
-            plt.ylim([-0.001, 0.01])
+            # plt.ylim([-0.001, 0.01])
 
             # Psi_0
-            line, = ax.plot(self.x_, self.Psi_0, label=r"t'=0.00s")
+            line, = ax.plot(self.x_, np.conj(self.Psi_0)*self.Psi_0, label=r"t'=0.00s")
             self.plot_insert_potential(fig, ax, pad=0.001)
             legend = plt.legend(loc="upper center")
-            plt.title("Probability density\n" + r"\Psi_0 = $(\Psi_1 + \Psi_2)/\sqrt{2}$")
+            plt.title("Probability density\n" + self.Psi_0_text)
             plt.xlabel(r"$x'$")
             plt.ylabel(r"$|\Psi(x', t')|^2$")
 
@@ -271,7 +280,7 @@ class Schrodinger:
                 Psi /= np.sqrt(np.trapz(np.conj(Psi)*Psi, self.x_))
 
                 line.set_ydata(np.conj(Psi)*Psi)
-                new_label = r"t'=" + f"{self.t_[i]:.2f}s"
+                new_label = r"t'=" + f"{self.t_[i]:.2e}s"
                 legend.get_texts()[0].set_text(new_label)
                 return line,
             
@@ -284,9 +293,7 @@ class Schrodinger:
                 blit=True
             )
 
-            # plt.legend()
-
-            path = "output/t33_prob_dens/test1.gif"
+            # path = "output/t33_prob_dens/test1.gif"
             if os.path.exists(path):
                 os.remove(path)
             anim.save(path, fps=60)
@@ -456,7 +463,7 @@ class Schrodinger:
                     Prob_dens = np.conj(Psi) * Psi
                     plt.plot(self.x_, Prob_dens, label=f"t={self.t_[i]:.2e}")
 
-            self.plot_insert_potential(fig, ax)
+            self.plot_insert_potential(fig, ax, pad=1)
             plt.legend(loc="upper center")
             plt.show()
 
