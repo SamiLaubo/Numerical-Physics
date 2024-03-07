@@ -127,23 +127,19 @@ class Schrodinger:
             eigvec_error[:, i] = np.sqrt(np.sum((self.eig_vecs[:, :num_eigvecs]**2 - psi_analytical**2)**2, axis=0)/psi_analytical.shape[0])
 
 
-            # if i < 10:
-            #     plt.figure()
-            #     plt.plot(self.x_, self.eig_vecs[:, i])
-            #     plt.plot(self.x_, np.sqrt(2)*np.sin((i+1)*np.pi*self.x_), '--')
-            #     plt.show()
-
-            # Root-Mean-Square-Deviation (RMSE)
-            # eigval_error[i] = np.sqrt(np.sum((self.eig_vals - self.lmbda)**2) / len(self.eig_vals))
 
         
 
         plt.figure()
         for i in range(num_eigvecs):
             plt.plot(1 / (Nx-1), eigvec_error[i])
-        plt.title("Eigenvector error")
+            x_lims = plt.gca().get_xlim()
+            x_text = (21*x_lims[1] - x_lims[0]) / 20 
+            plt.text(x_text, eigvec_error[i, 0], f"n={i}")
+
+        plt.title("Eigenfunction error")
         plt.xlabel(r"$\Delta x$")
-        plt.ylabel("RMSE")
+        plt.ylabel("$RMSE$")
         plt.show()
 
     def load_eigs(self, all=False):
@@ -175,27 +171,27 @@ class Schrodinger:
         else:
             return np.trapz(Psi_n*Psi_0, self.x_)
     
-    def check_orthogonality(self):
+    def check_orthogonality(self, num=100, threshold=1e-9):
         eig_vals, eig_vecs = self.load_eigs(all=False)
         x_ = np.linspace(0, 1, len(eig_vals))
         
         all_less = True
-        for i in range(min(eig_vecs.shape[1], 10)):
-            for j in range(i+1, min(eig_vecs.shape[1], 10)):
+        for i in range(min(eig_vecs.shape[1], num)):
+            for j in range(i+1, min(eig_vecs.shape[1], num)):
                 a_n = self.alpha_n(eig_vecs[:, i], eig_vecs[:, j], x_=x_)
 
-                if a_n > 1e-10:
+                if a_n > threshold:
                     all_less = False
                     print(f'alpha_n over threshold (1e-10) for i, j = {i}, {j}: {a_n}')
 
         if all_less:
-            print("All alpha_n were less than 1e-10")
+            print(f"All alpha_n were less than 1e-10 for the {num} lowest eigenvectors")
 
 
     # Task 2.10
-    def init_cond(self, name="psi_1", eigenfunc_idxs=[]):
+    def init_cond(self, name="psi_0", eigenfunc_idxs=[]):
         # Create initial function
-        if name == "psi_1":
+        if name == "psi_0":
             self.Psi_0 =  np.sqrt(2) * np.sin(np.pi * self.x_)
         elif name == "delta":
             self.Psi_0 = np.zeros_like(self.x_)
@@ -223,7 +219,7 @@ class Schrodinger:
 
 
 
-    def evolve(self, plot=True, animate=False):
+    def evolve(self, plot=True, animate=False, start_idx_plot=0):
         # Load eigenvalues and vectors
         # eig_vals, eig_vecs = self.load_eigs()
         alpha = np.zeros(len(self.eig_vals))
@@ -249,7 +245,7 @@ class Schrodinger:
 
             # Plot Psi
             plt.figure()
-            for i in range(5):
+            for i in range(start_idx_plot,5):
                 Prob_dens = np.conj(Psi[Psi.shape[0]//5*i]) * Psi[Psi.shape[0]//5*i]
                 plt.plot(self.x_, Prob_dens, label=f"t={self.t_[Psi.shape[0]//5*i]:.2e}")
                 # plt.plot(self.x_, Psi[Psi.shape[0]//5*i], label=f"t={self.t_[Psi.shape[0]//5*i]:.2e}")

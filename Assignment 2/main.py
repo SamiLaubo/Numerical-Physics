@@ -15,9 +15,10 @@ TASK_4 = False
 
 # Subtasks (only if super is true)
 TASK_2_4 = False
-TASK_2_5 = True
+TASK_2_5 = False
 TASK_2_7 = False
-TASK_2_10 = False
+TASK_2_10 = True
+TASK_2_11 = True
 
 TASK_3_1 = True
 TASK_3_2 = True
@@ -36,7 +37,8 @@ TASK_4_4 = True
 # Function to run task 2
 def Task_2():
     # Create class
-    S = Schrodinger(L=1, Nx=1000, Nt=100, T=1e8)
+    S = Schrodinger(L=1, Nx=1000, Nt=100, T=5e30)
+    S.eigen()
 
     if TASK_2_4:
         t1 = time.time(); print("\nTask 2.4")
@@ -51,8 +53,8 @@ def Task_2():
     if TASK_2_5:
         t1 = time.time(); print("\nTask 2.5")
 
-        # Plot how the error in eigenvalues increase with dx
-        S.eigvec_error_dx(Nx_low=20, Nx_high=1000, N=100, save=False)
+        # Plot how the error in eigenvectors increase with dx
+        S.eigvec_error_dx(Nx_low=50, Nx_high=1000, N=100, save=False, num_eigvecs=20)
         
         t2 = time.time(); print(f'\nTask 2.5 time: {t2 - t1:.4e}')
 
@@ -60,8 +62,8 @@ def Task_2():
     if TASK_2_7:
         t1 = time.time(); print("\nTask 2.7")
         
-        # Check orthogonality of eigenvectors
-        S.check_orthogonality()
+        # Check orthogonality of 20 lowest eigenvectors
+        S.check_orthogonality(threshold=1e-9)
         
         t2 = time.time(); print(f'Task 2.7 time: {t2 - t1:.4e}')
 
@@ -70,8 +72,20 @@ def Task_2():
         t1 = time.time(); print("\nTask 2.10")
         
         # Set initial condition to first eigen function
+        S.init_cond(name="psi_0")
+        S.evolve()
+        
+        t2 = time.time(); print(f'Task 2.10 time: {t2 - t1:.4e}')
+
+    if TASK_2_11:
+        t1 = time.time(); print("\nTask 2.10")
+        
+        # Set initial condition to first eigen function
         S.init_cond(name="delta")
         S.evolve()
+
+        # Scaled better
+        S.evolve(start_idx_plot=1)
         
         t2 = time.time(); print(f'Task 2.10 time: {t2 - t1:.4e}')
 
@@ -290,5 +304,4 @@ if __name__ == '__main__':
 
 
 # Sammenligne res:
-    # Task 2.5 - Error kurve
     # Task 3.5 - Root values vs eigenvalues
