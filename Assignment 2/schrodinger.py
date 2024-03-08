@@ -4,13 +4,15 @@ import os
 import glob
 
 import numpy as np
+import scipy
+from tqdm import tqdm
 from functools import partial
 from scipy.constants import hbar
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 
 class Schrodinger:
-    def __init__(self, L=1, Nx=1000, Nt=1, T=1, m=1, pot_type="well", v0=0, vr=0) -> None:
+    def __init__(self, L=1, Nx=1002, Nt=1, T=1, m=1, pot_type="well", v0=0, vr=0) -> None:
         # Values
         self.L = L
         self.T = T
@@ -90,7 +92,12 @@ class Schrodinger:
         A /= -self.dx_**2
 
         # Find eigen values and vectors
-        self.eig_vals, self.eig_vecs = np.linalg.eigh(A)
+        # self.eig_vals, self.eig_vecs = np.linalg.eigh(A)
+        diag = 2 / self.dx_**2 + self.pot
+        offdiag = -np.ones(self.Nx-1) / self.dx_**2
+        # diag = -2 / self.dx_**2 * self.pot
+        # offdiag = -np.ones(self.Nx-1) / self.dx_**2
+        self.eig_vals, self.eig_vecs = scipy.linalg.eigh_tridiagonal(diag, offdiag)
 
         # Normalize
         self.eig_vecs /= np.sqrt(np.trapz(self.eig_vecs**2, self.x_, axis=0))
@@ -537,7 +544,7 @@ class Schrodinger:
         eigenvalues_1 = np.zeros(N)
         vr = np.linspace(vr_low, vr_high, N)
 
-        for i in range(N):
+        for i in tqdm(range(N)):
             # Set potential
             self.vr = vr[i]
 
@@ -568,25 +575,29 @@ class Schrodinger:
 
         tau = np.zeros(N)
         vr = np.linspace(vr_low, vr_high, N)
+        
+        H = np.zeros((self.Nx, self.Nx))
+        np.fill_diagonal(H[1:], 1)
+        np.fill_diagonal(H[:, 1:], 1)
+        H /= -self.dx_**2
 
-        for i in range(N):
+        self.vr=0
+        self.discretize_pot()
+        self.eigen()
+
+        for i in tqdm(range(N)):
             # Set potential
             self.vr = vr[i]
 
             # Discretize potential again
             self.discretize_pot()
+            np.fill_diagonal(H, 2/self.dx_**2 + self.pot)
 
             # Get eigenvalues
-            self.eigen()
+            # self.eigen() # eigvals for nu_r=0 only
 
             # Calculate tau
-            H = np.zeros((self.Nx, self.Nx))
-            np.fill_diagonal(H, -2 - self.dx_**2 * self.pot)
-            np.fill_diagonal(H[1:], 1)
-            np.fill_diagonal(H[:, 1:], 1)
-            H /= -self.dx_**2
-
-            tau[i] = np.trapz(self.eig_vecs[0] * (H @ self.eig_vecs[1]), self.x_)
+            tau[i] = scipy.integrate.simpson(self.eig_vecs[:, 0] * (H @ self.eig_vecs[:, 1]), self.x_)
 
         # Plot
         plt.figure()
@@ -622,14 +633,17 @@ class Schrodinger:
         g0 = np.array([1, 0], dtype=np.complex128).T # Ground state
         e0 = np.array([0, 1], dtype=np.complex128).T # First excited state
 
+        print(np.linalg.eigh(np.array([[-epsilon_0/2, 0], [0, epsilon_0/2]])))
+
+
         # Matrices
         M = np.ones((2,2), dtype=np.complex128)
         N = np.zeros((2,2), dtype=np.complex128)
 
         # Helper constants
-        N_const = -1j*self.dt_ / hbar * tau
+        N_const = -1j*self.dt_ * tau
         M_const = -N_const / 2
-        exp_const = 1j*epsilon_0/hbar
+        exp_const = 1j*epsilon_0
 
         # Set initial condition to ground state
         f[:, 0] = g0 # Since t=0 gives N=0
@@ -652,24 +666,26 @@ class Schrodinger:
                 # Add to sum
                 Nf_sum += N @ f[:, k-1]
 
+                print(f'{N @ f[:, k-1] = }')
+
             # Update values
             sin = np.sin(omega * self.t_[k])
             exp_pos = np.exp(exp_const*self.t_[k])
             exp_neg = np.exp(-exp_const*self.t_[k])
             
             # Update M
-            M[0, 1] = 1 + M_const * sin * exp_pos
-            M[1, 0] = 1 + M_const * sin * exp_neg
+            M[1, 0] = 1 + M_const * sin * exp_pos
+            M[0, 1] = 1 + M_const * sin * exp_neg
 
             f[:, k] = np.linalg.solve(M, Nf_sum)
 
             # Normalize
             f[:, k] /= np.sqrt(np.sum(np.conj(f[:, k])*f[:, k]))
 
-        # Find probabilities for system to be in state e0
+        # Find probabilities for system to be in state g0
         # Normalize
         # f /= np.sqrt(np.sum(np.conj(f)*f, axis=0))
-        prob = e0 @ f
+        prob = g0 @ f
         # prob /= np.sqrt(np.sum(np.conj(prob)*prob, axis=0))
         prob = np.conj(prob)*prob
 

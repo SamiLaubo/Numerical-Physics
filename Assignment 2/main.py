@@ -10,15 +10,15 @@ import root_finder
 
 # Choose tasks to run
 TASK_2 = False
-TASK_3 = True
-TASK_4 = False
+TASK_3 = False
+TASK_4 = True
 
 # Subtasks (only if super is true)
-TASK_2_4 = False
-TASK_2_5 = False
-TASK_2_7 = False
-TASK_2_10 = False
-TASK_2_11 = False
+TASK_2_4 = True
+TASK_2_5 = True
+TASK_2_7 = True
+TASK_2_10 = True
+TASK_2_11 = True
 
 TASK_3_1 = True
 TASK_3_2 = True
@@ -33,11 +33,14 @@ TASK_4_1 = True
 TASK_4_2 = True
 TASK_4_4 = True
 
+# Constants
+NX = 1002 # Number of x-points
+
 
 # Function to run task 2
 def Task_2():
     # Create class
-    S = Schrodinger(L=1, Nx=1000, Nt=100, T=5e30)
+    S = Schrodinger(L=1, Nx=NX, Nt=100, T=5e30)
     S.eigen()
 
     if TASK_2_4:
@@ -96,8 +99,8 @@ def Task_3():
         t1 = time.time(); print("\nTask 3.1")
 
         # Check if barrier potential gives well when v0=0
-        S_well = Schrodinger(L=1, Nx=1000, pot_type="well")
-        S_barrier = Schrodinger(L=1, Nx=1000, pot_type="barrier", v0=0)
+        S_well = Schrodinger(L=1, Nx=NX, pot_type="well")
+        S_barrier = Schrodinger(L=1, Nx=NX, pot_type="barrier", v0=0)
 
         # Get eigenvalues
         S_well.eigen()
@@ -114,7 +117,7 @@ def Task_3():
 
         # With barrier
         v0 = 1e3 # Barrier height
-        S = Schrodinger(L=1, Nx=1000, pot_type="barrier", v0=v0, Nt=100)
+        S = Schrodinger(L=1, Nx=NX, pot_type="barrier", v0=v0, Nt=100)
         S.eigen()
         S.plot_eig_values(n_eig_vecs=4)
 
@@ -125,13 +128,13 @@ def Task_3():
         t1 = time.time(); print("\nTask 3.3")
 
         v0 = 1e3
-        S = Schrodinger(L=1, Nx=1000, pot_type="barrier", v0=v0, Nt=100)
+        S = Schrodinger(L=1, Nx=NX, pot_type="barrier", v0=v0, Nt=100)
         S.eigen()
-        S.init_cond(name="eigenfuncs", eigenfunc_idxs=[1,3])
+        S.init_cond(name="eigenfuncs", eigenfunc_idxs=[0,1])
         S.plot_Psi_0()
 
         # Update end time
-        S.T = np.pi / (S.eig_vals[3] - S.eig_vals[1]) * S.t0
+        S.T = np.pi / (S.eig_vals[1] - S.eig_vals[0]) * S.t0
 
         # Discretize t again
         S.discretize_x_t()
@@ -182,7 +185,7 @@ def Task_3():
         t1 = time.time(); print("\nTask 3.7")
 
         v0 = 1e3
-        S = Schrodinger(pot_type="barrier", v0=v0, Nt=10)
+        S = Schrodinger(Nx=NX, pot_type="barrier", v0=v0, Nt=10)
         S.eigen()
         S.init_cond(name="eigenfuncs", eigenfunc_idxs=[1])
         S.plot_Psi_0()
@@ -205,7 +208,7 @@ def Task_3():
         t1 = time.time(); print("\nTask 3.9")
 
         v0 = 1e3
-        S = Schrodinger(pot_type="barrier", v0=v0, Nt=10)
+        S = Schrodinger(Nx=NX, pot_type="barrier", v0=v0, Nt=10)
         S.eigen()
         S.init_cond(name="eigenfuncs", eigenfunc_idxs=[1])
         # S.plot_Psi_0()
@@ -232,16 +235,18 @@ def Task_4():
         v0 = 100
         vr_low = -1e3
         vr_high = 1e3
-        S = Schrodinger(pot_type="detuning", v0=v0, Nt=10, vr=0)
+        # vr_low = -100
+        # vr_high = 100
+        S = Schrodinger(Nx=NX, pot_type="detuning", v0=v0, Nt=10, vr=0)
         S.eigen()
-        S.init_cond(name="eigenfuncs", eigenfunc_idxs=[1])
+        S.init_cond(name="eigenfuncs", eigenfunc_idxs=[0])
         S.plot_Psi_0()
 
         # Energy difference
         print(f'epsilon_0 = {S.eig_vals[1] - S.eig_vals[0]}')
 
         # Plot vr dependence
-        S.detuning_Vr_dependence(vr_low=vr_low, vr_high=vr_high)
+        # S.detuning_Vr_dependence(vr_low=vr_low, vr_high=vr_high)
         
         t2 = time.time(); print(f'Task 4.1 time: {t2 - t1:.4e}')
 
@@ -250,7 +255,7 @@ def Task_4():
         t1 = time.time(); print("\nTask 4.2")
 
         # Find tunneling amplitude as function of vr
-        S.tunneling_amplitude(vr_low=vr_low, vr_high=vr_high, N=100)
+        S.tunneling_amplitude(vr_low=vr_low, vr_high=vr_high, N=101)
         # tau(vr) = -0.3140942438188899 * vr + -1.0424101057055188
 
         t2 = time.time(); print(f'Task 4.2 time: {t2 - t1:.4e}')
@@ -260,7 +265,7 @@ def Task_4():
         t1 = time.time(); print("\nTask 4.4")
 
         v0 = 100
-        S = Schrodinger(pot_type="detuning", v0=v0, Nt=1000)
+        S = Schrodinger(Nx=NX, pot_type="detuning", v0=v0, Nt=1000, vr=0)
         
         # Calculate a reasonable time
         S.eigen()
@@ -295,6 +300,10 @@ if __name__ == '__main__':
     # check that disc_x_t comes before
     # Fix potential plot in Forward euler og Crank
     # 3.8-3.9
+    # Endre slik at n=0 er laveste state
+    # Do error calc with psi and not psi**2
+    
+    # Figure text equal to Figure caption in report
 
 
 # Questions:
