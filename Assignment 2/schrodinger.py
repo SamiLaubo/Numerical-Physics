@@ -34,11 +34,12 @@ class Schrodinger:
         self.discretize_pot()
 
     def discretize_x_t(self):
-        self.t, self.dt = np.linspace(0, self.T, self.Nt, retstep=True)
-        self.x, self.dx = np.linspace(0, self.L, self.Nx, retstep=True)
+        # self.t, self.dt = np.linspace(0, self.T, self.Nt, retstep=True)
+        # self.x, self.dx = np.linspace(0, self.L, self.Nx, retstep=True)
 
         # Dimentionless t' and x'
-        self.t_, self.dt_ = np.linspace(0, self.T / self.t0, self.Nt, retstep=True)
+        # self.t_, self.dt_ = np.linspace(0, self.T / self.t0, self.Nt, retstep=True)
+        self.t_, self.dt_ = np.linspace(0, self.T, self.Nt, retstep=True)
         self.x_, self.dx_ = np.linspace(0, 1, self.Nx, retstep=True)
 
     def discretize_pot(self):
@@ -633,17 +634,22 @@ class Schrodinger:
         g0 = np.array([1, 0], dtype=np.complex128).T # Ground state
         e0 = np.array([0, 1], dtype=np.complex128).T # First excited state
 
-        print(np.linalg.eigh(np.array([[-epsilon_0/2, 0], [0, epsilon_0/2]])))
-
 
         # Matrices
         M = np.ones((2,2), dtype=np.complex128)
         N = np.zeros((2,2), dtype=np.complex128)
 
         # Helper constants
-        N_const = -1j*self.dt_ * tau
+        N_const = -1j*self.dt_*tau / hbar# * self.t0
         M_const = -N_const / 2
-        exp_const = 1j*epsilon_0
+        exp_const = 1j*epsilon_0 / hbar# * self.t0
+        sin_const = omega#*self.t0
+
+        print(f'{self.T = }')
+        print(f'{N_const = }')
+        print(f'{M_const = }')
+        print(f'{exp_const = }')
+        print(f'{sin_const = }')
 
         # Set initial condition to ground state
         f[:, 0] = g0 # Since t=0 gives N=0
@@ -666,16 +672,24 @@ class Schrodinger:
                 # Add to sum
                 Nf_sum += N @ f[:, k-1]
 
-                print(f'{N @ f[:, k-1] = }')
+                # print(f'{N @ f[:, k-1] = }')
 
             # Update values
-            sin = np.sin(omega * self.t_[k])
-            exp_pos = np.exp(exp_const*self.t_[k])
-            exp_neg = np.exp(-exp_const*self.t_[k])
+            sin = np.sin(sin_const * self.t_[k])
+            exp_pos = np.exp(exp_const * self.t_[k])
+            exp_neg = np.exp(-exp_const * self.t_[k])
+
+            if k == 2 or k == 10:
+                print(f'{exp_neg = }')
+                print(f'{exp_pos = }')
+                print(f'{sin = }')
             
             # Update M
             M[1, 0] = 1 + M_const * sin * exp_pos
             M[0, 1] = 1 + M_const * sin * exp_neg
+
+            print(f'{M = }')
+
 
             f[:, k] = np.linalg.solve(M, Nf_sum)
 
@@ -692,7 +706,8 @@ class Schrodinger:
         # Plot
         plt.figure()
         plt.plot(self.t_, prob, label="Numerical")
-        plt.plot(self.t_, np.sin(self.t_*tau/(2*hbar))**2, '--', label="Analytical")
+        # plt.plot(self.t_, np.sin(self.m*self.L**2*tau/hbar**2 * self.t_)**2, '--', label="Analytical")
+        plt.plot(self.t_, np.sin(tau/(2*hbar) * self.t_)**2, '--', label="Analytical")
 
         plt.legend()
         plt.show()

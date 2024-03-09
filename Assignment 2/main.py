@@ -8,6 +8,8 @@ import time
 from schrodinger import *
 import root_finder
 
+# In this code: t' = 2mL^2/hbar * t
+
 # Choose tasks to run
 TASK_2 = False
 TASK_3 = False
@@ -40,7 +42,7 @@ NX = 1002 # Number of x-points
 # Function to run task 2
 def Task_2():
     # Create class
-    S = Schrodinger(L=1, Nx=NX, Nt=100, T=5e30)
+    S = Schrodinger(L=1, Nx=NX, Nt=100, T=2e-4)
     S.eigen()
 
     if TASK_2_4:
@@ -134,7 +136,7 @@ def Task_3():
         S.plot_Psi_0()
 
         # Update end time
-        S.T = np.pi / (S.eig_vals[1] - S.eig_vals[0]) * S.t0
+        S.T = np.pi / (S.eig_vals[1] - S.eig_vals[0])
 
         # Discretize t again
         S.discretize_x_t()
@@ -193,7 +195,7 @@ def Task_3():
         # S.T = np.pi / (S.eig_vals[1]) * S.t0
 
         # Fiddle with 100 to see when it messes up
-        S.T = 1 * S.dx_**2 * S.t0
+        S.T = 1 * S.dx_**2
         # Discretize t again
         S.discretize_x_t()
         print(f'{S.dt_/S.dx_**2 = }')
@@ -216,7 +218,7 @@ def Task_3():
         # S.T = np.pi / (S.eig_vals[1]) * S.t0
 
         # Fiddle with 100 to see when it messes up
-        S.T = 1 * S.dx_**2 * S.t0
+        S.T = 1 * S.dx_**2
         # Discretize t again
         S.discretize_x_t()
         print(f'{S.dt_/S.dx_**2 = }')
@@ -271,7 +273,8 @@ def Task_4():
         S.eigen()
         epsilon_0 = S.eig_vals[1] - S.eig_vals[0]
         tau = 0.02 * epsilon_0
-        S.T = 12*np.pi*hbar/tau * S.t0
+        # S.T = 12*np.pi*hbar/tau
+        S.T = 12*np.pi*hbar/tau
         
         # Discretize again
         S.discretize_x_t()
