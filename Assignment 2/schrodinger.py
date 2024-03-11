@@ -10,6 +10,33 @@ from functools import partial
 from scipy.constants import hbar
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
+from IPython.display import set_matplotlib_formats
+
+# Plot params
+# plt.style.use('ggplot')
+plt.style.use('seaborn-v0_8-whitegrid')
+fontsize = 12
+plt.rcParams.update({
+    "axes.titlesize": fontsize,
+    "axes.labelsize": fontsize,
+    # "axes.grid": True,
+    # "axes.linewidth": 1,
+    # "lines.linewidth": 1.5,
+    # "lines.markersize": 7,
+    # "figure.figsize": (9, 4.5),
+    # 'axes.titlepad': 10,
+    "ytick.labelsize": fontsize,
+    "xtick.labelsize": fontsize,
+    # "ytick.major.pad": 5,
+    # "xtick.major.pad": 5,
+    # 'legend.loc': 'best',
+    "legend.fontsize": fontsize,
+    # "legend.handlelength": 1.5,
+    "legend.frameon": True,
+    "mathtext.fontset": "stix",
+    "font.family": "STIXGeneral"
+})
+set_matplotlib_formats("svg")
 
 class Schrodinger:
     def __init__(self, L=1, Nx=1002, Nt=1, T=1, m=1, pot_type="well", v0=0, vr=0) -> None:
@@ -134,21 +161,18 @@ class Schrodinger:
             # Calculate error of probability RMSE
             eigvec_error[:, i] = np.sqrt(np.sum((self.eig_vecs[:, :num_eigvecs]**2 - psi_analytical**2)**2, axis=0)/psi_analytical.shape[0])
 
-
-
-        
-
-        plt.figure()
+        fig = plt.figure()
         for i in range(num_eigvecs):
-            plt.plot(1 / (Nx-1), eigvec_error[i])
+            plt.plot(1 / (Nx-1), eigvec_error[i], color="k")
             x_lims = plt.gca().get_xlim()
             x_text = (21*x_lims[1] - x_lims[0]) / 20 
-            plt.text(x_text, eigvec_error[i, 0], f"n={i}")
+            plt.text(x_text, eigvec_error[i, 0], f"n={i}", fontsize=fontsize)
 
         plt.title("Eigenfunction error")
-        plt.xlabel(r"$\Delta x$")
+        plt.xlabel(r"$\Delta x'$")
         plt.ylabel("$RMSE$")
         plt.show()
+        fig.savefig("output/task_2/t25_eigenstate_error.pdf")
 
     def load_eigs(self, all=False):
         # Load eigenvalues and vectors from saved files
@@ -202,7 +226,7 @@ class Schrodinger:
         if name == "psi_0":
             self.Psi_0 =  np.sqrt(2) * np.sin(np.pi * self.x_)
 
-            self.Psi_0_text = r"$\Psi_0 = \sqrt{2}\sin{\pi x'}$"
+            self.Psi_0_text = r"$\Psi_0 = \sqrt{2}\sin(\pi x')$"
             
         elif name == "delta":
             self.Psi_0 = np.zeros_like(self.x_)
@@ -258,7 +282,7 @@ class Schrodinger:
             Psi = f(self.Nt, self.Nx, self.t_, self.eig_vals, self.eig_vecs, self.x_)
 
             # Plot Psi
-            plt.figure()
+            fig = plt.figure()
             plt.title("Probability density\n" + self.Psi_0_text)
             plt.xlabel(r"$x'$")
             plt.ylabel(r"$|\Psi(x', t')|^2$")
@@ -268,6 +292,7 @@ class Schrodinger:
                 # plt.plot(self.x_, Psi[Psi.shape[0]//5*i], label=f"t={self.t_[Psi.shape[0]//5*i]:.2e}")
             plt.legend()
             plt.show()
+            fig.savefig(path)
 
         # Animation
         if animate:
@@ -326,12 +351,13 @@ class Schrodinger:
                 skip = len(Schrodinger_2.x_)//50
                 plt.plot(Schrodinger_2.x_[::skip], Schrodinger_2.eig_vecs[:, i][::skip], 'x', color=cmap(i))
             
-        plt.title("Eigenfunctions")
+        plt.title("Eigenstates")
         plt.ylabel("$\Psi(x')$")
         plt.xlabel("$x'$")
         plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
         plt.tight_layout()
         plt.show()
+        fig.savefig("output/task_2/t24_eigenstates.pdf")
 
         # Energy levels
         fig, ax = plt.subplots()
@@ -352,19 +378,21 @@ class Schrodinger:
         plt.title("Eigenvalues")
         plt.ylabel(r"$\lambda_n = \frac{2mL^2}{\hbar^2}E_n$")
         plt.show()
+        fig.savefig("output/task_2/t24_eigenvalues.pdf")
 
 
         # Task 2.4
         if plot_vals_n:
-            plt.figure()
-            plt.plot(self.n, self.eig_vals, label="Numerical eigenvalues")
-            plt.plot(self.n, self.lmbda, label="Analytical eigenvalues")
+            fig = plt.figure()
+            plt.plot(self.n, self.lmbda, '--', label="Analytical eigenvalues", color="k")
+            plt.plot(self.n, self.eig_vals, label="Numerical eigenvalues", color="k")
 
             plt.title("Eigenvalues")
             plt.xlabel("$n$")
             plt.ylabel(r"$\lambda_n = \frac{2mL^2}{\hbar^2}E_n$")
             plt.legend()
             plt.show()
+            fig.savefig("output/task_2/t24_eigenvalues_n.pdf")
 
     def plot_Psi_0(self):
         fig, ax = plt.subplots()

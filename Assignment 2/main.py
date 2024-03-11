@@ -11,9 +11,9 @@ import root_finder
 # In this code: t' = 2mL^2/hbar * t
 
 # Choose tasks to run
-TASK_2 = False
+TASK_2 = True
 TASK_3 = False
-TASK_4 = True
+TASK_4 = False
 
 # Subtasks (only if super is true)
 TASK_2_4 = True
@@ -78,7 +78,7 @@ def Task_2():
         
         # Set initial condition to first eigen function
         S.init_cond(name="psi_0")
-        S.evolve()
+        S.evolve(path="output/task_2/t210_prob_dens_psi1.pdf")
         
         t2 = time.time(); print(f'Task 2.10 time: {t2 - t1:.4e}')
 
@@ -87,10 +87,10 @@ def Task_2():
         
         # Set initial condition to first eigen function
         S.init_cond(name="delta")
-        S.evolve()
+        S.evolve(path="output/task_2/t210_prob_dens_delta.pdf")
 
         # Scaled better
-        S.evolve(start_idx_plot=1)
+        S.evolve(start_idx_plot=1, path="output/task_2/t210_prob_dens_delta_scaled.pdf")
         
         t2 = time.time(); print(f'Task 2.10 time: {t2 - t1:.4e}')
 
