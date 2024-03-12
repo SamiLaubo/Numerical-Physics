@@ -633,19 +633,21 @@ class Schrodinger:
             eigenvalues_1[i] = self.eig_vals[1]
 
         # Plot
-        plt.figure()
-        plt.title("Two lowest eigenvalues for detuning")
+        fig = plt.figure()
+        plt.title("Two lowest eigenvalues and amplitude for detuning")
         plt.xlabel(r"$\nu_r=\frac{2mL^2}{\hbar^2}\cdot V$")
         plt.ylabel(r"$\lambda_n = \frac{2mL^2}{\hbar^2}E_n$")
 
-        plt.plot(vr, eigenvalues_0, label=r"$\lambda_0$")
-        plt.plot(vr, eigenvalues_1, label=r"$\lambda_1$")
+        plt.plot(vr, eigenvalues_0, label=r"$\lambda_0$", color="k")
+        plt.plot(vr, eigenvalues_1, '--', label=r"$\lambda_1$", color="k")
 
-        plt.legend()
+        plt.legend(loc="lower center")
         plt.show()
+        fig.savefig("output/task_4/t41_detuning_eigvals.pdf")
+        return fig
 
     # Task 4.2
-    def tunneling_amplitude(self, vr_low, vr_high, N=100):
+    def tunneling_amplitude(self, vr_low, vr_high, N=100, fig=None):
 
         tau = np.zeros(N)
         vr = np.linspace(vr_low, vr_high, N)
@@ -674,21 +676,25 @@ class Schrodinger:
             tau[i] = scipy.integrate.simpson(self.eig_vecs[:, 0] * (H @ self.eig_vecs[:, 1]), self.x_)
 
         # Plot
-        plt.figure()
-        plt.title("Tunneling amplitude")
-        plt.xlabel(r"$\nu_r$")
-        plt.ylabel(r"$\tau(\nu_r)$")
+        if fig is None:
+            fig = plt.figure()
+            plt.title("Tunneling amplitude")
+            plt.xlabel(r"$\nu_r = \frac{2mL^2}{\hbar^2}\cdot V_0$")
+            plt.ylabel(r"$\tau(\nu_r)$")
+        else:
+            plt.figure(fig)
 
-        plt.plot(vr, tau, label=r"$\tau$")
+        plt.plot(vr, tau, label=r"$\tau$", color="k", linestyle=(0, (1, 10)))
 
         # Fit linear regression
         slope, intercept = np.polyfit(vr, tau, 1)
-        plt.plot(vr, slope*vr + intercept, '--', label="Linear regression", color="black")
+        # plt.plot(vr, slope*vr + intercept, '--', label="Linear regression", color="black")
 
         print(f'tau(vr) = {slope} * vr + {intercept}')
 
-        plt.legend()
+        plt.legend(loc="lower center")
         plt.show()
+        fig.savefig("output/task_4/t42_tunneling_amplitude.pdf")
 
     # Task 4.4
     def Rabi_oscillations(self):

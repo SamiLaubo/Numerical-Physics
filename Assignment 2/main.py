@@ -33,7 +33,7 @@ TASK_3_9 = True
 
 TASK_4_1 = True
 TASK_4_2 = True
-TASK_4_4 = True
+TASK_4_4 = False
 
 # Constants
 NX = 1002 # Number of x-points
@@ -276,7 +276,7 @@ def Task_4():
         print(f'epsilon_0 = {S.eig_vals[1] - S.eig_vals[0]}')
 
         # Plot vr dependence
-        # S.detuning_Vr_dependence(vr_low=vr_low, vr_high=vr_high)
+        fig = S.detuning_Vr_dependence(vr_low=vr_low, vr_high=vr_high)
         
         t2 = time.time(); print(f'Task 4.1 time: {t2 - t1:.4e}')
 
@@ -285,7 +285,7 @@ def Task_4():
         t1 = time.time(); print("\nTask 4.2")
 
         # Find tunneling amplitude as function of vr
-        S.tunneling_amplitude(vr_low=vr_low, vr_high=vr_high, N=101)
+        S.tunneling_amplitude(vr_low=vr_low, vr_high=vr_high, N=101, fig=fig)
         # tau(vr) = -0.3140942438188899 * vr + -1.0424101057055188
 
         t2 = time.time(); print(f'Task 4.2 time: {t2 - t1:.4e}')
@@ -315,6 +315,11 @@ def Task_4():
 
     
 if __name__ == '__main__':
+    # Create dirs
+    for i in range(2,5):
+        if not os.path.exists(f"output/task_{i}/"):
+            os.makedirs(f"output/task_{i}/")
+
     if TASK_2:
         Task_2()
 
