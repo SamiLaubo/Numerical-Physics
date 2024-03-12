@@ -11,9 +11,9 @@ import root_finder
 # In this code: t' = 2mL^2/hbar * t
 
 # Choose tasks to run
-TASK_2 = True
+TASK_2 = False
 TASK_3 = False
-TASK_4 = False
+TASK_4 = True
 
 # Subtasks (only if super is true)
 TASK_2_4 = True
@@ -22,13 +22,13 @@ TASK_2_7 = True
 TASK_2_10 = True
 TASK_2_11 = True
 
-TASK_3_1 = True
-TASK_3_2 = True
-TASK_3_3 = True
-TASK_3_4 = True
-TASK_3_5 = True
-TASK_3_6 = True
-TASK_3_7 = True
+TASK_3_1 = False
+TASK_3_2 = False
+TASK_3_3 = False
+TASK_3_4 = False
+TASK_3_5 = False
+TASK_3_6 = False
+TASK_3_7 = False
 TASK_3_9 = True
 
 TASK_4_1 = True
@@ -50,7 +50,7 @@ def Task_2():
 
         # Find eigenvalues and plot
         S.eigen()
-        S.plot_eig_values(plot_vals_n=True)
+        S.plot_eig_values(plot_vals_n=True, path="output/task_2/t24_f")
         
         t2 = time.time(); print(f'Task 2.4 time: {t2 - t1:.4e}')
 
@@ -96,6 +96,7 @@ def Task_2():
 
 
 def Task_3():
+    v0 = 1e3
 
     if TASK_3_1:
         t1 = time.time(); print("\nTask 3.1")
@@ -109,7 +110,7 @@ def Task_3():
         S_barrier.eigen()
 
         # Plot both
-        S_well.plot_eig_values(S_barrier)
+        S_well.plot_eig_values(S_barrier, path="output/task_3/t31_")
 
         t2 = time.time(); print(f'\nTask 3.1 time: {t2 - t1:.4e}')
 
@@ -121,7 +122,7 @@ def Task_3():
         v0 = 1e3 # Barrier height
         S = Schrodinger(L=1, Nx=NX, pot_type="barrier", v0=v0, Nt=100)
         S.eigen()
-        S.plot_eig_values(n_eig_vecs=4)
+        S.plot_eig_values(n_eig_vecs=4, path="output/task_3/t31_")
 
         t2 = time.time(); print(f'Task 3.2 time: {t2 - t1:.4e}')
 
@@ -141,8 +142,8 @@ def Task_3():
         # Discretize t again
         S.discretize_x_t()
 
-        # Evolve
-        S.evolve(plot=False, animate=True, path="output/t33_prob_dens/prob_dens.gif")
+        # Evolve    
+        S.evolve(plot=True, animate=False, path="output/task_3/t33_prob_dens.pdf")
         
         t2 = time.time(); print(f'Task 3.3 time: {t2 - t1:.4e}')
 
@@ -150,9 +151,13 @@ def Task_3():
     if TASK_3_4:
         t1 = time.time(); print("\nTask 3.4")
 
+        v0 = 1e3
+        S = Schrodinger(L=1, Nx=NX, pot_type="barrier", v0=v0, Nt=100)
+        S.eigen()
+
         # Root finding
         # Plot function
-        root_finder.plot_f(v0, eig_vals=S.eig_vals[:np.where(S.eig_vals>v0)[0][0]])
+        root_finder.plot_f(v0, eig_vals=S.eig_vals[:np.where(S.eig_vals>v0)[0][0]], path="output/task_3/t34_roots.pdf")
         
         t2 = time.time(); print(f'Task 3.4 time: {t2 - t1:.4e}')
 
@@ -170,7 +175,7 @@ def Task_3():
         t1 = time.time(); print("\nTask 3.6")
     
         S = Schrodinger(pot_type="barrier")
-        S.eigvals_under_barrier(v0_low=0, v0_high=1e5, N=10)
+        S.eigvals_under_barrier(v0_low=0, v0_high=1e5, N=10, path="output/task_3/t36_eigvals_under_barrier.pdf")
     
 
         # Find value where #lambda 0->1
@@ -201,7 +206,7 @@ def Task_3():
         print(f'{S.dt_/S.dx_**2 = }')
         
         # Use forward euler to solve
-        S.forward_scheme(method="Forward Euler", plot=False, animate=True)
+        S.forward_scheme(method="Forward Euler", plot=True, animate=False, path="output/task_3/t37_forward_euler.pdf", CFL=True)
         
         t2 = time.time(); print(f'Task 3.7 time: {t2 - t1:.4e}')
 
@@ -209,22 +214,45 @@ def Task_3():
     if TASK_3_9:
         t1 = time.time(); print("\nTask 3.9")
 
-        v0 = 1e3
-        S = Schrodinger(Nx=NX, pot_type="barrier", v0=v0, Nt=10)
-        S.eigen()
-        S.init_cond(name="eigenfuncs", eigenfunc_idxs=[1])
-        # S.plot_Psi_0()
-        # Update end time
-        # S.T = np.pi / (S.eig_vals[1]) * S.t0
+        # v0 = 1e3
+        # S = Schrodinger(Nx=NX, pot_type="barrier", v0=v0, Nt=10)
+        # S.eigen()
+        # S.init_cond(name="eigenfuncs", eigenfunc_idxs=[1])
+        # # S.init_cond(name="delta", eigenfunc_idxs=[1])
+        # # S.plot_Psi_0()
+        # # Update end time
+        # # S.T = np.pi / (S.eig_vals[1]) * S.t0
 
-        # Fiddle with 100 to see when it messes up
-        S.T = 1 * S.dx_**2
+        # # Fiddle with 100 to see when it messes up
+        # S.T = 1 * S.dx_**2
+        # # Discretize t again
+        # S.discretize_x_t()
+        # print(f'{S.dt_/S.dx_**2 = }')
+
+        # # Use Crank Nicolson to solve
+        # S.forward_scheme(method="Crank Nicolson", plot=True, animate=False)
+        
+        # With delta inital compared to 2.11
+        S = Schrodinger(Nx=NX, pot_type="barrier", v0=0, Nt=40, T=2e-7)
+        S.eigen()
+        S.init_cond(name="delta")
         # Discretize t again
         S.discretize_x_t()
         print(f'{S.dt_/S.dx_**2 = }')
 
         # Use Crank Nicolson to solve
-        S.forward_scheme(method="Crank Nicolson", plot=False, animate=True)
+        S.forward_scheme(method="Crank Nicolson", plot=True, animate=False, path="output/task_3/t39_delta_comp_211.pdf")
+
+        # With delta inital compared to 2.11
+        S = Schrodinger(Nx=NX, pot_type="barrier", v0=0, Nt=40, T=2e-7)
+        S.eigen()
+        S.init_cond(name="delta")
+        # Discretize t again
+        S.discretize_x_t()
+        print(f'{S.dt_/S.dx_**2 = }')
+
+        # Use Crank Nicolson to solve
+        S.forward_scheme(method="Crank Nicolson", plot=True, animate=False, path="output/task_3/t39_delta_comp_211.pdf")
         
         t2 = time.time(); print(f'Task 3.9 time: {t2 - t1:.4e}')
 

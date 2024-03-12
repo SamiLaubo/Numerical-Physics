@@ -282,14 +282,17 @@ class Schrodinger:
             Psi = f(self.Nt, self.Nx, self.t_, self.eig_vals, self.eig_vecs, self.x_)
 
             # Plot Psi
-            fig = plt.figure()
+            fig, ax = plt.subplots()
             plt.title("Probability density\n" + self.Psi_0_text)
             plt.xlabel(r"$x'$")
             plt.ylabel(r"$|\Psi(x', t')|^2$")
             for i in range(start_idx_plot,5):
                 Prob_dens = np.conj(Psi[Psi.shape[0]//5*i]) * Psi[Psi.shape[0]//5*i]
-                plt.plot(self.x_, Prob_dens, label=f"t={self.t_[Psi.shape[0]//5*i]:.2e}")
-                # plt.plot(self.x_, Psi[Psi.shape[0]//5*i], label=f"t={self.t_[Psi.shape[0]//5*i]:.2e}")
+                plt.plot(self.x_, Prob_dens, label=f"t'={self.t_[Psi.shape[0]//5*i]:.2e}")
+            # Add last index
+            Prob_dens = np.conj(Psi[-1]) * Psi[-1]
+            plt.plot(self.x_, Prob_dens, label=f"t'={self.t_[-1]:.2e}")
+            self.plot_insert_potential(fig, ax, pad=0.001)
             plt.legend()
             plt.show()
             fig.savefig(path)
@@ -333,7 +336,7 @@ class Schrodinger:
             print(f"Animation saved to {path}")
             plt.close()
 
-    def plot_eig_values(self, Schrodinger_2=None, n_eig_vecs=4, n_eig_vals=10, plot_vals_n=False):
+    def plot_eig_values(self, Schrodinger_2=None, n_eig_vecs=4, n_eig_vals=10, plot_vals_n=False, path=""):
             
         # Plot eigenfunctions
         fig, ax = plt.subplots()
@@ -357,7 +360,8 @@ class Schrodinger:
         plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
         plt.tight_layout()
         plt.show()
-        fig.savefig("output/task_2/t24_eigenstates.pdf")
+        if len(path) > 0:
+            fig.savefig(path + "eigenstates.pdf")
 
         # Energy levels
         fig, ax = plt.subplots()
@@ -378,7 +382,8 @@ class Schrodinger:
         plt.title("Eigenvalues")
         plt.ylabel(r"$\lambda_n = \frac{2mL^2}{\hbar^2}E_n$")
         plt.show()
-        fig.savefig("output/task_2/t24_eigenvalues.pdf")
+        if len(path) > 0:
+            fig.savefig(path + "eigenvalues.pdf")
 
 
         # Task 2.4
@@ -392,7 +397,8 @@ class Schrodinger:
             plt.ylabel(r"$\lambda_n = \frac{2mL^2}{\hbar^2}E_n$")
             plt.legend()
             plt.show()
-            fig.savefig("output/task_2/t24_eigenvalues_n.pdf")
+            if len(path) > 0:
+                fig.savefig(path + "eigenvalues_n.pdf")
 
     def plot_Psi_0(self):
         fig, ax = plt.subplots()
@@ -424,7 +430,7 @@ class Schrodinger:
             plt.plot(self.x_, (self.pot/max(np.max(self.pot), 1)*0.5*y_lims[1]) + y_lims[0] + pad, '--', color="black")
 
     # Task 3.6
-    def eigvals_under_barrier(self, v0_low, v0_high, N, plot=True):
+    def eigvals_under_barrier(self, v0_low, v0_high, N, plot=True, path=""):
         v0 = np.linspace(v0_low, v0_high, N)
         lmbda_under = np.zeros_like(v0)
 
@@ -439,19 +445,21 @@ class Schrodinger:
 
         # Plot
         if plot:
-            plt.figure()
+            fig = plt.figure()
             plt.plot(v0, lmbda_under)
             plt.xlabel(r"$\nu_0 = \frac{2mL^2}{\hbar^2}\cdot V_0$")
             plt.ylabel("Count")
             plt.title("Number of eigenvalues less than barrier height")
             plt.show()
+            if len(path):
+                fig.savefig(path)
 
         # Return value where #lmbda shifts to 1
         last_zero = np.where(lmbda_under>0)[0][0]-1
         return v0[last_zero], v0[last_zero+1]
 
     # Task 3.7
-    def forward_scheme(self, method="Forward Euler", plot=False, animate=False):
+    def forward_scheme(self, method="Forward Euler", plot=False, animate=False, path="", CFL=False):
         # Initial condition
         Psi = np.copy(self.Psi_0).astype(np.complex128)
 
@@ -483,46 +491,83 @@ class Schrodinger:
         if plot:
             # Plot Psi
             fig, ax = plt.subplots()        
-            title = "Probability density with " + method
+            title = "Evolution of the probability density with " + method
             if self.Psi_0_text is not None:
                 title += "\n" + self.Psi_0_text
             plt.title(title)
             plt.ylabel(r"$|\Psi(x', t')|^2$")
             plt.xlabel("x'")
 
-            for i in range(self.Nt-1):
-                # Calculate evolution
-                Psi = psi_step(Psi, A, method, self.x_)
+            # Plot for different CFL values
+            if CFL:
+            # Remove dt
+                A /= self.dt_
 
-                # Plot only for five times
-                if i % ((self.Nt-1)//4) == 0:
+                for dt in [110, 90, 70]:
+                    # Update params
+                    self.T = dt*self.dx_**2
+                    self.discretize_x_t() # Only dt changes
+
+                    # New matrix
+                    AA = A * self.dt_
+
+                    # Reset psi
+                    Psi = np.copy(self.Psi_0).astype(np.complex128)
+
+                    for i in range(self.Nt-1):
+                        # Calculate evolution
+
+                        Psi = psi_step(Psi, AA, method, self.x_)
+
+                        # Plot only for five times
+                        # if i % ((self.Nt-1)//4) == 0:
+                        #     Prob_dens = np.conj(Psi) * Psi
+                        #     plt.plot(self.x_, Prob_dens, label=f"t'={self.t_[i]:.2e}")
+                    
                     Prob_dens = np.conj(Psi) * Psi
-                    plt.plot(self.x_, Prob_dens, label=f"t={self.t_[i]:.2e}")
+                    plt.plot(self.x_, Prob_dens, label=f"CFL={self.dt_/self.dx_**2:.2f}")
+            else:
+                for i in range(self.Nt-1):
+                        # Calculate evolution
 
-            self.plot_insert_potential(fig, ax, pad=1)
-            plt.legend(loc="upper center")
+                        Psi = psi_step(Psi, A, method, self.x_)
+
+                        # Plot only for five times
+                        if (i % ((self.Nt-1)//5) == 0 and i != 0) or i==1:
+                            Prob_dens = np.conj(Psi) * Psi
+                            plt.plot(self.x_, Prob_dens, label=f"t'={self.t_[i]:.2e}")
+                    
+                    # Prob_dens = np.conj(Psi) * Psi
+                    # plt.plot(self.x_, Prob_dens, label=f"CFL={self.dt_/self.dx_**2:.2f}")
+
+            self.plot_insert_potential(fig, ax, pad=0.1)
+            # plt.legend(loc="upper center")
+            plt.legend(loc="best")
             plt.show()
+            if len(path):
+                fig.savefig(path)
 
         if animate:
             yl = {
-                "Crank Nicolson": [0, 5],
-                "Forward Euler": [0, 30]
+                "Crank Nicolson": [-0.1, 3],
+                "Forward Euler": [-0.1, 3]
             }
 
             self.animate_evolution(
                 partial(psi_step, A=A, method=method, x_=self.x_), 
-                path = f"output/t39_prob_dens/{method}.gif",
+                path = f"output/task_3/t39{method}.gif",
                 method=method,
-                y_lims=yl.get(method)
+                y_lims=yl.get(method),
+                pad=0.1
             )
 
-    def animate_evolution(self, psi_func, path, method="", y_lims=[-0.001, 0.01]):
+    def animate_evolution(self, psi_func, path, method="", y_lims=[-0.001, 0.01], pad=1):
         fig, ax = plt.subplots()
         plt.ylim(y_lims)
 
         # Psi_0
         line, = ax.plot(self.x_, self.Psi_0, label=r"t'=0.00s")
-        self.plot_insert_potential(fig, ax, pad=1)
+        self.plot_insert_potential(fig, ax, pad=pad)
         legend = plt.legend(loc="upper center")
 
         # Make title        

@@ -12,7 +12,7 @@ def f(lmbda, v0):
 
     return np.exp(kappa/3) * (kappa_sin + k_cos)**2 - np.exp(-kappa/3) * (kappa_sin - k_cos)**2
 
-def plot_f(v0, N=1000, eig_vals=[]):
+def plot_f(v0, N=1000, eig_vals=[], path=""):
     lmbdas = np.linspace(0, v0, N)
 
     fig, ax = plt.subplots()
@@ -39,6 +39,8 @@ def plot_f(v0, N=1000, eig_vals=[]):
     plt.legend(loc="center right")
     # plt.title("")
     plt.show()
+    if len(path) > 0:
+        fig.savefig(path)
 
 def find_root(func, init_guess):
     return root_scalar(func, x0=init_guess).root
