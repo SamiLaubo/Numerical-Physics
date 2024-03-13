@@ -248,7 +248,7 @@ class Schrodinger:
             for is_not_first, idx in enumerate(eigenfunc_idxs):
                 if is_not_first:
                     self.Psi_0_text += " + "
-                self.Psi_0_text += r"\Psi_" + str(idx)
+                self.Psi_0_text += r"\Psi_" + str(idx+1)
             if len(eigenfunc_idxs) > 1:
                 self.Psi_0_text += r")/\sqrt{" + str(len(eigenfunc_idxs)) + r"}$"
             else:
@@ -346,7 +346,7 @@ class Schrodinger:
             plt.plot(self.x_, self.eig_vecs[:, i], label=f"n = {i+1}", color=cmap(i))
 
         # Potential
-        self.plot_insert_potential(fig, ax)
+        # self.plot_insert_potential(fig, ax)
 
         # Plot second solution with x dots
         if Schrodinger_2 is not None:
@@ -357,31 +357,35 @@ class Schrodinger:
         plt.title("Eigenstates")
         plt.ylabel("$\Psi(x')$")
         plt.xlabel("$x'$")
-        plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
-        plt.tight_layout()
-        plt.show()
-        if len(path) > 0:
-            fig.savefig(path + "eigenstates.pdf")
+        plt.grid(False)
+        # plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+        plt.legend(loc=(0.325, 0.7), )
+        # plt.tight_layout()
+        # plt.show()
+        # if len(path) > 0:
+        #     fig.savefig(path + "eigenstates.pdf")
 
         # Energy levels
-        fig, ax = plt.subplots()
+        # fig, ax = plt.subplots()
         text_i = []
+        ax_right = ax.twinx()
+        ax_right.grid(False)
         for i in range(n_eig_vals):
-            plt.hlines(self.eig_vals[i], 0, 1, label=f"eval={self.eig_vals[i]:.2f}")
+            ax_right.hlines(self.eig_vals[i], 1, 1.2, color="k")#, label=f"eval={self.eig_vals[i]:.2f}")
 
             # Text
             if i < n_eig_vals - 1 and abs(self.eig_vals[i] - self.eig_vals[i+1]) < 10:
                 text_i.append(str(i+1))
             else:
                 text_i.append(str(i+1))
-                plt.text(1.1, self.eig_vals[i]-5, f"n={','.join(text_i)}")
+                ax_right.text(1.1, self.eig_vals[i]+15, f"n={','.join(text_i)}")
                 text_i = []
 
         # Potential
-        self.plot_insert_potential(fig, ax, true_size=True)
-        plt.title("Eigenvalues")
-        plt.ylabel(r"$\lambda_n = \frac{2mL^2}{\hbar^2}E_n$")
-        plt.show()
+        self.plot_insert_potential(fig, ax_right, true_size=True)
+        # plt.title("Eigenvalues")
+        ax_right.set_ylabel(r"$\lambda_n = \frac{2mL^2}{\hbar^2}E_n$")
+        # plt.show()
         if len(path) > 0:
             fig.savefig(path + "eigenvalues.pdf")
 

@@ -12,8 +12,8 @@ import root_finder
 
 # Choose tasks to run
 TASK_2 = False
-TASK_3 = False
-TASK_4 = True
+TASK_3 = True
+TASK_4 = False
 
 # Subtasks (only if super is true)
 TASK_2_4 = True
@@ -22,14 +22,14 @@ TASK_2_7 = True
 TASK_2_10 = True
 TASK_2_11 = True
 
-TASK_3_1 = False
-TASK_3_2 = False
+TASK_3_1 = True
+TASK_3_2 = True
 TASK_3_3 = False
 TASK_3_4 = False
 TASK_3_5 = False
 TASK_3_6 = False
 TASK_3_7 = False
-TASK_3_9 = True
+TASK_3_9 = False
 
 TASK_4_1 = True
 TASK_4_2 = True
