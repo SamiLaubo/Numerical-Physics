@@ -12,8 +12,8 @@ import root_finder
 
 # Choose tasks to run
 TASK_2 = False
-TASK_3 = True
-TASK_4 = False
+TASK_3 = False
+TASK_4 = True
 
 # Subtasks (only if super is true)
 TASK_2_4 = True
@@ -31,9 +31,9 @@ TASK_3_6 = False
 TASK_3_7 = False
 TASK_3_9 = False
 
-TASK_4_1 = True
-TASK_4_2 = True
-TASK_4_4 = False
+TASK_4_1 = False
+TASK_4_2 = False
+TASK_4_4 = True
 
 # Constants
 NX = 1002 # Number of x-points
@@ -302,7 +302,8 @@ def Task_4():
         epsilon_0 = S.eig_vals[1] - S.eig_vals[0]
         tau = 0.02 * epsilon_0
         # S.T = 12*np.pi*hbar/tau
-        S.T = 12*np.pi*hbar/tau
+        # S.T = 12*np.pi*hbar/tau
+        S.T = 12*np.pi/tau
         
         # Discretize again
         S.discretize_x_t()

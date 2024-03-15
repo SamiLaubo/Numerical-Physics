@@ -723,9 +723,9 @@ class Schrodinger:
         N = np.zeros((2,2), dtype=np.complex128)
 
         # Helper constants
-        N_const = -1j*self.dt_*tau / hbar# * self.t0
+        N_const = -1j*self.dt_*tau# / hbar# * self.t0
         M_const = -N_const / 2
-        exp_const = 1j*epsilon_0 / hbar# * self.t0
+        exp_const = 1j*epsilon_0# / hbar# * self.t0
         sin_const = omega#*self.t0
 
         print(f'{self.T = }')
@@ -733,6 +733,7 @@ class Schrodinger:
         print(f'{M_const = }')
         print(f'{exp_const = }')
         print(f'{sin_const = }')
+        print(f'{epsilon_0 = }')
 
         # Set initial condition to ground state
         f[:, 0] = g0 # Since t=0 gives N=0
@@ -768,16 +769,16 @@ class Schrodinger:
                 print(f'{sin = }')
             
             # Update M
-            M[1, 0] = 1 + M_const * sin * exp_pos
-            M[0, 1] = 1 + M_const * sin * exp_neg
+            M[1, 0] = M_const * sin * exp_pos
+            M[0, 1] = M_const * sin * exp_neg
 
-            print(f'{M = }')
+            # print(f'{M = }')
 
 
             f[:, k] = np.linalg.solve(M, Nf_sum)
 
             # Normalize
-            f[:, k] /= np.sqrt(np.sum(np.conj(f[:, k])*f[:, k]))
+            # f[:, k] /= np.sqrt(np.sum(np.conj(f[:, k])*f[:, k]))
 
         # Find probabilities for system to be in state g0
         # Normalize
@@ -790,7 +791,7 @@ class Schrodinger:
         plt.figure()
         plt.plot(self.t_, prob, label="Numerical")
         # plt.plot(self.t_, np.sin(self.m*self.L**2*tau/hbar**2 * self.t_)**2, '--', label="Analytical")
-        plt.plot(self.t_, np.sin(tau/(2*hbar) * self.t_)**2, '--', label="Analytical")
+        plt.plot(self.t_, np.sin(tau/2 * self.t_)**2, '--', label="Analytical")
 
         plt.legend()
         plt.show()
