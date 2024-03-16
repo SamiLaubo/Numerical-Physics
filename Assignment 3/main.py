@@ -19,7 +19,7 @@ def Task_1():
     
     if TASK_1_1:
         P = Polymer(monomers=15, flexibility=0.5)
-        # P.plot_polymer()
+        P.plot_polymer()
 
 
 if __name__ == '__main__':

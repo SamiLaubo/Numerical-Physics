@@ -127,17 +127,20 @@ class Polymer:
             plt.plot(self.monomer_pos[i, 0], self.monomer_pos[i, 1], 'o', color=cm(self.monomer_pos[i, 2]-1))
             plt.text(self.monomer_pos[i, 0]-0.25, self.monomer_pos[i, 1]+0.1, str(i))
 
-        # Prettyfy
+        # Prettify
         ax.grid(True, linestyle='--')
-        ax.set_yticks(np.arange(int(ax.get_ylim()[0]), np.ceil(ax.get_ylim()[1])))
-        ax.set_xticks(np.arange(int(ax.get_xlim()[0]), np.ceil(ax.get_xlim()[1])))
         ax.set_ylim([self.monomer_pos[:,1].min()-0.5, self.monomer_pos[:,1].max()+0.5])
         ax.set_xlim([self.monomer_pos[:,0].min()-0.5, self.monomer_pos[:,0].max()+0.5])
-        ax.set_aspect("equal")
+        yticks = np.arange(self.monomer_pos[:,1].min(), self.monomer_pos[:,1].max()+1)
+        xticks = np.arange(self.monomer_pos[:,0].min(), self.monomer_pos[:,0].max()+1)
+        ax.set_yticks(yticks)
+        ax.set_xticks(xticks)
         ax.set_xticklabels([])
         ax.set_yticklabels([])
+        ax.set_aspect("equal")
         # Border
         for axis in ['top', 'bottom', 'left', 'right']:
             ax.spines[axis].set_linewidth(2.5)
             ax.spines[axis].set_color('black')
         plt.show()
+        plt.close()
