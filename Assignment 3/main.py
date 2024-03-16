@@ -6,6 +6,8 @@
 
 import time
 
+from protein import Polymer
+
 # Choose tasks to run
 TASK_1 = True
 
@@ -14,11 +16,10 @@ TASK_1_1 = True
 
 
 def Task_1():
-    pass
-
-
-
-
+    
+    if TASK_1_1:
+        P = Polymer(monomers=15, flexibility=0.5)
+        # P.plot_polymer()
 
 
 if __name__ == '__main__':
