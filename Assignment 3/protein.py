@@ -23,7 +23,13 @@ set_matplotlib_formats("svg")
 
 
 class Polymer:
-    def __init__(self, monomers=10, grid_size=-1,  flexibility=1.0, output_path="output/") -> None:
+    # Create interaction matrix as static such that all class instances uses the same matrix
+    # Uniform random matrix from -2kb to -4kb
+    MM_interaction_energy = np.random.random((20,20))*2 - 4
+    # Make it symmetric by copying lower triangle to upper triangle
+    MM_interaction_energy = np.tril(MM_interaction_energy) + np.triu(MM_interaction_energy.T, 1)
+
+    def __init__(self, monomers=10, grid_size=-1,  flexibility=1.0, output_path="output/", T=10) -> None:
         """Initialize polymer class
 
         Args:
@@ -37,9 +43,11 @@ class Polymer:
         self.monomers = monomers
         self.flexibility = flexibility
         self.grid_size = grid_size if grid_size > -1 else 2 * monomers
+        self.T = T
+        self.beta = 1 / T # 1/TkB: kb=1
         
         # Grid to store polymer number+1: uint8 = 0-255
-        self.monomer_grid = np.zeros((self.grid_size, self.grid_size), dtype=np.uint8)
+        self.monomer_grid = np.zeros((self.grid_size, self.grid_size), dtype=np.int8) - 1
 
         # Ordered list of monomer positions and amino acid number
         self.monomer_pos = np.zeros((monomers, 3), dtype=np.uint16)
@@ -47,8 +55,6 @@ class Polymer:
         # Initialize polymer
         self.init_polymer()
 
-        # Create monomer-monomer interaction energy matrix
-        self.create_interaction_matrix()
 
     def dir_setup(self, output_path):
         self.output_path = output_path 
@@ -67,16 +73,17 @@ class Polymer:
             if self._init_polymer(): break
 
         assert i != tries-1, "Polymer initialisation got stuck"
-        print(f'Polymer initialisation used {i}/{tries} tries.')
+        # print(f'Polymer initialisation used {i}/{tries} tries.')
 
     def _init_polymer(self):
         """Create initial polymer
         """
-        # Clear grid
-        self.monomer_grid[:,:] = 0
+        # Clear grid and pos
+        self.monomer_grid[:,:] = -1
+        self.monomer_pos[:,:] = 0
 
-        # Start the monomer center left (y, x)
-        pos = np.ones(2, dtype=np.int16) * ((self.grid_size - self.monomers) // 2)
+        # Start the monomer center (y, x)
+        pos = np.ones(2, dtype=np.int16) * (self.grid_size // 2)
 
         # Rotation matrix for direction change
         rotate = np.array([[0, 1], [-1, 0]], dtype=np.int8)
@@ -105,7 +112,7 @@ class Polymer:
             cw = np.random.random() < .5
             for ii in range(4):
                 # Direction works
-                if self.monomer_grid[pos[0]+direction[0], pos[1]+direction[1]] == 0:
+                if self.monomer_grid[pos[0]+direction[0], pos[1]+direction[1]] == -1:
                     break
                 # Go to other possible direction
                 else:
@@ -122,10 +129,10 @@ class Polymer:
             pos += direction
 
             # Create random amino acid and save
-            amino_acid_number = np.random.randint(1, 21, dtype=np.uint8)
-            self.monomer_grid[pos[0], pos[1]] = i+1 # amino_acid_number
-            self.monomer_pos[i,0:2] = pos
-            self.monomer_pos[i,2] = amino_acid_number
+            amino_acid_number = np.random.randint(0, 20, dtype=np.uint8)
+            self.monomer_grid[pos[0], pos[1]] = i # Sequential monomer number
+            self.monomer_pos[i,:-1] = pos
+            self.monomer_pos[i,-1] = amino_acid_number
 
         # Success
         return True
@@ -170,54 +177,128 @@ class Polymer:
         plt.clf()
         plt.close()
 
-    def create_interaction_matrix(self, plot=False):
-        """Create interaction matrix
+    def plot_interaction_matrix(self, save=True):
+        """Plot interaction matrix
         """
-        # Uniform random matrix from -2kb to -4kb
-        self.MM_interaction_energy = np.random.random((20,20))*2 - 4
-
-        # Make it symmetric by copying lower triangle to upper triangle
-        self.MM_interaction_energy = np.tril(self.MM_interaction_energy) + np.triu(self.MM_interaction_energy.T, 1)
-
         # Plot matrix
-        if plot:
-            fig = plt.figure()
-            plt.title("Monomer-Monomer Interaction Energy")
-            sn.heatmap(self.MM_interaction_energy, annot=False, vmin=-4, vmax=-2,
-                    #    index=r"$Amino acid$", columns=r"$Amino acid$", 
-                       cbar_kws={"label": r"Energy $(k_b)$"})
-            plt.xlabel("Amino acid")
-            plt.ylabel("Amino acid")
-            plt.show()
+        fig = plt.figure()
+        plt.title("Monomer-Monomer Interaction Energy")
+        sn.heatmap(self.MM_interaction_energy, annot=False, vmin=-4, vmax=-2,
+                    cbar_kws={"label": r"Energy $(k_b)$"})
+        plt.xlabel("Amino acid")
+        plt.ylabel("Amino acid")
+        plt.show()
+        if save:
             fig.savefig(self.output_path + "task_1/MM_interaction_energy.pdf")
-            plt.close()
-        
+        plt.close()
+    
     def find_nearest_neighbours(self):
         """Generate list of nearesest neighbours for all monomers
         """
+        
+        self.NN = self.njit_find_nearest_neighbours(self.monomers, self.monomer_pos, self.monomer_grid)
 
+    @staticmethod
+    @njit # Compile with Numba
+    def njit_find_nearest_neighbours(monomers, monomer_pos, monomer_grid):
         # Pairs of connecting monomers
-        # [[monomer5, monomer9],...]
-        self.NN = []
+        # [[monomer5, monomer9],...] or eqv in 3d 
+        dim = len(monomer_grid.shape)
+        NN = np.array([[0,0]], dtype=np.uint8)
+        new_connection = np.array([[0,0]], dtype=np.uint8)
 
         get_surrounding_coords = np.array([[0,1],[1,0],[0,-1],[-1,0]])
-        for i in range(self.monomers):
-            surrounding_coords = self.monomer_pos[i,:-1] - get_surrounding_coords            
+        for i in range(monomers):
+            surrounding_coords = monomer_pos[i,:-1] - get_surrounding_coords            
 
             for coord in surrounding_coords:
                 # Skip if previous or next monomer
-                # if i < 3:
-                #     print(f'{self.monomer_pos[max(0,i-1):min(self.monomers,i+2),:-1] = }')
-                #     print(f'{coord = }')
-                if (coord == self.monomer_pos[max(0,i-1):min(self.monomers,i+2),:-1]).all(1).any():
-                    # if i < 3:
-                    #     print("No")
-                    continue
+                if i > 0:
+                    if np.array_equal(coord, monomer_pos[i-1,:-1]):
+                        continue
+                if i < monomers-1:
+                    if np.array_equal(coord, monomer_pos[i+1,:-1]):
+                        continue
                 
                 # Neighbouring monomer
-                if self.monomer_grid[coord[0], coord[1]] != 0:
-                    new_connection = [i, self.monomer_grid[coord[0], coord[1]]-1]
+                if monomer_grid[coord[0], coord[1]] != -1:
+                    # Set new connection
+                    new_connection[0,0] = i
+                    new_connection[0,1] = monomer_grid[coord[0], coord[1]]
 
                     # Check if opposite is not there already
-                    if new_connection[::-1] not in self.NN:
-                        self.NN.append(new_connection)
+                    if ((new_connection[0,::-1]==NN).sum(axis=1)==dim).sum()==0:
+                        NN = np.vstack((NN, new_connection))
+
+        return NN[1:]
+
+    def calculate_energy(self):
+        """Calculate the energy of the polymer
+        """
+        self.E = self.njit_calculate_energy(self.NN, self.MM_interaction_energy, self.monomer_pos)
+
+    @staticmethod
+    @njit # Compile with numba
+    def njit_calculate_energy(NN, MM_interaction_energy, monomer_pos):
+        if len(NN)==0:
+            return 0
+        
+        E = 0
+        for pair in NN:
+            # Find energy between monomer types
+            E += MM_interaction_energy[monomer_pos[pair[0],-1], monomer_pos[pair[1],-1]]
+        return E
+
+    def init_multiple(self, N=1000, plot=False, bins=100, save=False):
+
+        """Initiate multiple tertary structures and calculate their energies
+
+        Args:
+            N (int, optional): Number of polymers to create. Defaults to 10.
+            plot (bool, optional): Plot histogram. Defaults to False.
+            bins (int, optional): Histogram bins. Defaults to 10.
+            save (bool, optional): Save histogram. Defaults to False.
+        """
+        E_list = np.zeros(N)
+
+        for i in range(N):
+            # Create new initial configuration
+            self.init_polymer()
+
+            # Find nearest neighbours
+            self.find_nearest_neighbours()
+
+            # Calculate energy
+            self.calculate_energy()
+
+            # if plot:
+            #     self.plot_polymer()
+
+            E_list[i] = self.E
+
+        if plot:
+            fig = plt.figure()
+            sn.histplot(E_list, bins=bins, color="k")
+            plt.xlabel(r"$Energy (k_b)$")
+            plt.title("Energy histogram of tertiary structures")
+            plt.show()
+            if save:
+                fig.savefig(self.output_path + "task_1/t13_energy_hist.pdf")
+
+    def MMC(self):
+        """Metropolis Monte Carlo
+        """
+        pass
+
+    @staticmethod
+    @njit
+    def njit_find_possible_configurations(monomer_grid):
+        """Given a grid of monomers, find legal transitions
+
+        Args:
+            monomer_grid (np.ndarray): 2d or 3d grid where monomers are 0-19 and empty space is -1
+        """
+
+        pass
+
+
