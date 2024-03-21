@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import os
 from numba import njit
 from itertools import product
+from tqdm import tqdm
 
 # Plot params
 plt.style.use('seaborn-v0_8-whitegrid')
@@ -43,7 +44,7 @@ class Polymer:
 
         self.monomers = monomers
         self.flexibility = flexibility
-        self.grid_size = grid_size if grid_size > -1 else 2 * monomers
+        self.grid_size = grid_size if grid_size > -1 else (5 * monomers) // 2
         self.T = T
         self.beta = 1 / T # 1/TkB: kb=1
         self.dims = dims # 2d or 3d
@@ -157,8 +158,11 @@ class Polymer:
         # Success
         return True
 
-    def plot_polymer(self):
+    def plot_polymer(self, MC_step=-1):
         fig, ax = plt.subplots()
+
+        if MC_step > -1:
+            plt.title(f"MC Step {MC_step}")
 
         # Plot polymer line
         plt.plot(self.monomer_pos[:, 0], self.monomer_pos[:, 1], color="k")
@@ -185,8 +189,8 @@ class Polymer:
         xticks = np.arange(self.monomer_pos[:,0].min(), self.monomer_pos[:,0].max()+1)
         ax.set_yticks(yticks)
         ax.set_xticks(xticks)
-        # ax.set_xticklabels([])
-        # ax.set_yticklabels([])
+        ax.set_xticklabels([])
+        ax.set_yticklabels([])
         ax.set_aspect("equal")
         # Border
         for axis in ['top', 'bottom', 'left', 'right']:
@@ -305,7 +309,7 @@ class Polymer:
             if save:
                 fig.savefig(self.output_path + "task_1/t13_energy_hist.pdf")
 
-    def MMC(self, MC_steps=1):
+    def MMC(self, MC_steps=1, plot_idxs=[]):
         """Metropolis Monte Carlo
         """
         if self.NN is None:
@@ -314,11 +318,13 @@ class Polymer:
             self.calculate_energy()
 
         self.MMC_observables = {
-            "E": np.zeros(MC_steps)
+            "E": np.zeros(MC_steps),
+            "e2e": np.zeros(MC_steps),
+            "RoG": np.zeros(MC_steps)
         }
         
         # For all steps/sweeps
-        for i in range(MC_steps):
+        for i in tqdm(range(MC_steps)):
             # Do N (#monomer) draws/trials
             for _ in range(self.monomers):
                 # Draw random monomer
@@ -349,11 +355,18 @@ class Polymer:
                     self.NN = old_NN
                     self.njit_apply_transition(self.monomer_grid, self.monomer_pos, monomer_idx, -possible_transitions[transition_idx])
 
-                self.plot_polymer()
+            # Save observables
+            # Energy
+            self.MMC_observables["E"][i] = self.E
+            # End to end euclidean distance
+            self.MMC_observables["e2e"][i] = np.sqrt(((self.monomer_pos[0] - self.monomer_pos[-1])**2).sum())
+            # Radius of gyration
+            center_of_mass = self.monomer_pos.sum(axis=0)/self.monomers
+            self.MMC_observables["RoG"][i] = np.sqrt(((self.monomer_pos-center_of_mass)**2).sum(axis=1).sum()/self.monomers)
 
 
-        # Save observables
-        self.MMC_observables["E"][i] = self.E
+            if i in plot_idxs:
+                self.plot_polymer(MC_step=i)
 
 
     @staticmethod
@@ -364,8 +377,6 @@ class Polymer:
         Args:
             monomer_grid (np.ndarray): 2d or 3d grid where monomers are 0-19 and empty space is -1
         """
-
-        print("new1")
         possible_transitions = np.zeros((1, monomer_pos.shape[1]), dtype=np.int8)
 
         if len(monomer_grid.shape) == 2:
@@ -386,9 +397,6 @@ class Polymer:
                         continue
 
                 possible_transitions = np.vstack((possible_transitions, direction[None,:]))
-
-            print(monomer_idx)
-            print(possible_transitions[1:])
 
             return possible_transitions[1:]    
 
@@ -416,3 +424,31 @@ class Polymer:
         # Add new position
         if len(monomer_pos.shape) == 2:
             monomer_grid[monomer_pos[monomer_idx,0], monomer_pos[monomer_idx,1]] = monomer_idx
+
+    def plot_MMC(self, running_mean_N=3):
+        """Plot observables from MMC
+        """
+
+        # Energy
+        fig = plt.figure()
+        plt.plot(np.convolve(self.MMC_observables.get("E"), np.ones(running_mean_N)/running_mean_N, mode="valid"))
+        plt.title("Metropolis Monte Carlo\nEnergy")
+        plt.xlabel("MC Step")
+        plt.ylabel(r"Energy $(k_b)$")
+        plt.show()
+
+        # e2e
+        fig = plt.figure()
+        plt.plot(np.convolve(self.MMC_observables.get("e2e"), np.ones(running_mean_N)/running_mean_N, mode="valid"))
+        plt.title("Metropolis Monte Carlo\nEnd-to-end euclidean distance")
+        plt.xlabel("MC Step")
+        plt.ylabel(r"Distance")
+        plt.show()
+
+        # e2e
+        fig = plt.figure()
+        plt.plot(np.convolve(self.MMC_observables.get("RoG"), np.ones(running_mean_N)/running_mean_N, mode="valid"))
+        plt.title("Metropolis Monte Carlo\nRadius of Gyration")
+        plt.xlabel("MC Step")
+        plt.ylabel(r"RoG")
+        plt.show()

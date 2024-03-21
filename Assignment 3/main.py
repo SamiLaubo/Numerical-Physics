@@ -51,10 +51,12 @@ def Task_1():
     if TASK_1_4:
         timer.start("1.4")
         
-        P = Polymer(monomers=15, flexibility=0.5)
+        P = Polymer(monomers=100, flexibility=0.0, T=1)
         P.find_nearest_neighbours()
         P.plot_polymer()
-        P.MMC(MC_steps=1)
+        P.MMC(MC_steps=10000, plot_idxs=[1,10,100])
+        P.plot_polymer(MC_step=10000)
+        P.plot_MMC(running_mean_N=10)
 
         timer.end()
 
