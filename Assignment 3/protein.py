@@ -157,29 +157,47 @@ class Polymer:
 
         # Success
         return True
+    
+    def remember_initial(self):
+        self.init_monomer_grid = self.monomer_grid.copy()
+        self.init_monomer_pos = self.monomer_pos.copy()
 
-    def plot_polymer(self, MC_step=-1):
-        fig, ax = plt.subplots()
+    def reset_to_initial(self):
+        self.monomer_grid = self.init_monomer_grid.copy()
+        self.monomer_pos = self.init_monomer_pos.copy()
+
+        self.find_nearest_neighbours()
+        self.calculate_energy()
+
+
+    def plot_polymer(self, MC_step=-1, ax=None):
+        show = False
+        if ax is None:
+            show = True
+            fig, ax = plt.subplots()
 
         if MC_step > -1:
-            plt.title(f"MC Step {MC_step}")
+            ax.set_title(f"MC Step {MC_step}")
 
         # Plot polymer line
-        plt.plot(self.monomer_pos[:, 0], self.monomer_pos[:, 1], color="k")
+        ax.plot(self.monomer_pos[:, 0], self.monomer_pos[:, 1], color="k")
         
         # Plot nearest neighbours
         if self.NN is not None:
             for pair in self.NN:
-                plt.plot(
-                    [self.monomer_pos[pair[0],0], self.monomer_pos[pair[1],0]],
-                    [self.monomer_pos[pair[0],1], self.monomer_pos[pair[1],1]],
-                    '--', color="r", linewidth=1)
+                try:
+                    ax.plot(
+                        [self.monomer_pos[pair[0],0], self.monomer_pos[pair[1],0]],
+                        [self.monomer_pos[pair[0],1], self.monomer_pos[pair[1],1]],
+                        '--', color="r", linewidth=1)
+                except:
+                    print(f"Failed at pair {pair}")
                 
         # Show number and use colormap to show which amino acid
         cm = plt.get_cmap('tab20')
         for i in range(self.monomers):
-            plt.plot(self.monomer_pos[i, 0], self.monomer_pos[i, 1], 'o', color=cm(self.monomer_pos[i, -1]-1))
-            plt.text(self.monomer_pos[i, 0]-0.25, self.monomer_pos[i, 1]-0.25, str(i))
+            ax.plot(self.monomer_pos[i, 0], self.monomer_pos[i, 1], 'o', color=cm(self.monomer_AA_number[i]))
+            ax.text(self.monomer_pos[i, 0]-0.25, self.monomer_pos[i, 1]-0.25, str(i))
 
         # Prettify
         ax.grid(True, linestyle='--')
@@ -196,10 +214,11 @@ class Polymer:
         for axis in ['top', 'bottom', 'left', 'right']:
             ax.spines[axis].set_linewidth(2.5)
             ax.spines[axis].set_color('black')
-        plt.show()
-        plt.close()
-        plt.clf()
-        plt.close()
+        
+        if show:
+            plt.show()
+            plt.close()
+        
 
     def plot_interaction_matrix(self, save=True):
         """Plot interaction matrix
@@ -236,16 +255,19 @@ class Polymer:
             surrounding_coords = monomer_pos[i] - get_surrounding_coords            
 
             for coord in surrounding_coords:
+                # if i > 0:
+                #     if np.array_equal(coord, monomer_pos[i-1]):
+                #         continue
+                # if i < monomers-1:
+                #     if np.array_equal(coord, monomer_pos[i+1]):
+                #         continue
                 # Skip if previous or next monomer
-                if i > 0:
-                    if np.array_equal(coord, monomer_pos[i-1]):
-                        continue
-                if i < monomers-1:
-                    if np.array_equal(coord, monomer_pos[i+1]):
-                        continue
+
+                # Only if not empty and not next or previous in covalent bonds
+                if monomer_grid[coord[0], coord[1]] not in [-1, i-1, i+1]:
                 
                 # Neighbouring monomer
-                if monomer_grid[coord[0], coord[1]] != -1:
+                # if monomer_grid[coord[0], coord[1]] != -1:
                     # Set new connection
                     new_connection[0,0] = i
                     new_connection[0,1] = monomer_grid[coord[0], coord[1]]
@@ -309,64 +331,102 @@ class Polymer:
             if save:
                 fig.savefig(self.output_path + "task_1/t13_energy_hist.pdf")
 
-    def MMC(self, MC_steps=1, plot_idxs=[]):
-        """Metropolis Monte Carlo
-        """
+
+    def MMC(self, MC_steps=1, plot_idxs=[], verbal=False):
         if self.NN is None:
             self.find_nearest_neighbours()
         if self.E is None:
             self.calculate_energy()
 
-        self.MMC_observables = {
+        self.MMC_observables = self.njit_MMC(
+                                    self.monomers, self.E, self.T, MC_steps,
+                                    self.surrounding_coords, self.MM_interaction_energy,
+                                    self.monomer_grid, self.monomer_pos, self.monomer_AA_number, self.NN,
+                                    self.njit_find_possible_transitions,
+                                    self.njit_apply_transition,
+                                    self.njit_find_nearest_neighbours,
+                                    self.njit_calculate_energy)
+        
+        # Update enrgy. Rest is updated by reference in function
+        self.E = self.MMC_observables.get("E")[-1]
+
+    @staticmethod
+    @njit()
+    # def njit_MMC(self, MC_steps=1, plot_idxs=[], verbal=True):
+    def njit_MMC(
+        monomers, E, T, MC_steps,
+        surrounding_coords, MM_interaction_energy,
+        monomer_grid, monomer_pos, monomer_AA_number, NN,
+        njit_find_possible_transitions,
+        njit_apply_transition,
+        njit_find_nearest_neighbours,
+        njit_calculate_energy):
+        """Metropolis Monte Carlo
+        """
+        # if self.NN is None:
+        #     self.find_nearest_neighbours()
+        # if self.E is None:
+        #     self.calculate_energy()
+
+        # self.MMC_observables = {
+        MMC_observables = {
             "E": np.zeros(MC_steps),
             "e2e": np.zeros(MC_steps),
             "RoG": np.zeros(MC_steps)
         }
         
         # For all steps/sweeps
-        for i in tqdm(range(MC_steps)):
+        # if verbal:
+        #     looper = tqdm(range(MC_steps))
+        # else:
+        looper = range(MC_steps)
+
+        for i in looper:
             # Do N (#monomer) draws/trials
-            for _ in range(self.monomers):
+            # for _ in range(self.monomers):
+            for _ in range(monomers):
                 # Draw random monomer
-                monomer_idx = np.random.randint(0, self.monomers)
+                # monomer_idx = np.random.randint(0, self.monomers)
+                monomer_idx = np.random.randint(0, monomers)
 
                 # Find possible transitions
-                possible_transitions = self.njit_find_possible_transitions(self.monomer_grid, self.monomer_pos, monomer_idx, self.surrounding_coords)
+                possible_transitions = njit_find_possible_transitions(monomer_grid, monomer_pos, monomer_idx, surrounding_coords)
 
                 # No possible transitions -> continue
                 if len(possible_transitions) == 0: continue
                 
                 # Pick random transition and apply
                 transition_idx = np.random.randint(0, possible_transitions.shape[0])
-                self.njit_apply_transition(self.monomer_grid, self.monomer_pos, monomer_idx, possible_transitions[transition_idx])
+                njit_apply_transition(monomer_grid, monomer_pos, monomer_idx, possible_transitions[transition_idx])
 
                 # Find nearest neighbours
-                old_NN = self.NN.copy()
-                self.NN = self.njit_find_nearest_neighbours(self.monomers, self.monomer_pos, self.monomer_grid)
+                old_NN = NN.copy()
+                NN = njit_find_nearest_neighbours(monomers, monomer_pos, monomer_grid)
                 
                 # Calculate new energy
-                old_E = self.E
-                self.E = self.njit_calculate_energy(self.NN, self.MM_interaction_energy, self.monomer_AA_number)
+                old_E = E
+                E = njit_calculate_energy(NN, MM_interaction_energy, monomer_AA_number)
 
                 # Accept based on Metropolis MC rule (or change back)
-                acceptance_prob = np.exp(-(self.E-old_E)/self.T) if self.E-old_E > 0 else 1.0
+                acceptance_prob = np.exp(-(E-old_E)/T) if E-old_E > 0 else 1.0
                 if acceptance_prob < np.random.random(): # Change back to original (else new state is kept)
-                    self.E = old_E
-                    self.NN = old_NN
-                    self.njit_apply_transition(self.monomer_grid, self.monomer_pos, monomer_idx, -possible_transitions[transition_idx])
+                    E = old_E
+                    NN = old_NN
+                    njit_apply_transition(monomer_grid, monomer_pos, monomer_idx, -possible_transitions[transition_idx])
 
             # Save observables
             # Energy
-            self.MMC_observables["E"][i] = self.E
+            MMC_observables["E"][i] = E
             # End to end euclidean distance
-            self.MMC_observables["e2e"][i] = np.sqrt(((self.monomer_pos[0] - self.monomer_pos[-1])**2).sum())
+            MMC_observables["e2e"][i] = np.sqrt(((monomer_pos[0] - monomer_pos[-1])**2).sum())
             # Radius of gyration
-            center_of_mass = self.monomer_pos.sum(axis=0)/self.monomers
-            self.MMC_observables["RoG"][i] = np.sqrt(((self.monomer_pos-center_of_mass)**2).sum(axis=1).sum()/self.monomers)
+            center_of_mass = monomer_pos.sum(axis=0)/monomers
+            MMC_observables["RoG"][i] = np.sqrt(((monomer_pos-center_of_mass)**2).sum(axis=1).sum()/monomers)
 
 
-            if i in plot_idxs:
-                self.plot_polymer(MC_step=i)
+            # if i in plot_idxs:
+            #     self.plot_polymer(MC_step=i)
+        return MMC_observables
 
 
     @staticmethod
@@ -431,24 +491,38 @@ class Polymer:
 
         # Energy
         fig = plt.figure()
-        plt.plot(np.convolve(self.MMC_observables.get("E"), np.ones(running_mean_N)/running_mean_N, mode="valid"))
-        plt.title("Metropolis Monte Carlo\nEnergy")
-        plt.xlabel("MC Step")
-        plt.ylabel(r"Energy $(k_b)$")
-        plt.show()
+        # fig, axs = plt.subplots(3, 2, sharex=True)
+        # axs = axs.ravel()
+        fig.suptitle(f"Metropolis Monte Carlo\nN = {self.monomers} - T = {self.T:.2f}")
+
+        ax = plt.subplot(321)
+        ax.plot(
+            np.convolve(self.MMC_observables.get("E"), np.ones(running_mean_N)/running_mean_N, mode="valid"),
+            color="k")
+        ax.set_title("Energy")
+        # ax.set_xlabel("MC Step")
+        ax.set_ylabel(r"Energy $(k_b)$")
 
         # e2e
-        fig = plt.figure()
-        plt.plot(np.convolve(self.MMC_observables.get("e2e"), np.ones(running_mean_N)/running_mean_N, mode="valid"))
-        plt.title("Metropolis Monte Carlo\nEnd-to-end euclidean distance")
-        plt.xlabel("MC Step")
-        plt.ylabel(r"Distance")
-        plt.show()
+        ax = plt.subplot(323, sharex=ax)
+        ax.plot(
+            np.convolve(self.MMC_observables.get("e2e"), np.ones(running_mean_N)/running_mean_N, mode="valid"),
+            color="k")
+        ax.set_title("End-to-end euclidean distance")
+        # ax.set_xlabel("MC Step")
+        ax.set_ylabel(r"Distance")
+        
+        # RoG
+        ax = plt.subplot(325, sharex=ax)
+        ax.plot(
+            np.convolve(self.MMC_observables.get("RoG"), np.ones(running_mean_N)/running_mean_N, mode="valid"),
+            color="k")
+        ax.set_title("Radius of Gyration")
+        ax.set_xlabel("MC Step")
+        ax.set_ylabel(r"RoG")
 
-        # e2e
-        fig = plt.figure()
-        plt.plot(np.convolve(self.MMC_observables.get("RoG"), np.ones(running_mean_N)/running_mean_N, mode="valid"))
-        plt.title("Metropolis Monte Carlo\nRadius of Gyration")
-        plt.xlabel("MC Step")
-        plt.ylabel(r"RoG")
+        ax = plt.subplot(122)
+        self.plot_polymer(ax=ax, MC_step=len(self.MMC_observables.get("RoG")))
+        
+        plt.tight_layout()
         plt.show()
