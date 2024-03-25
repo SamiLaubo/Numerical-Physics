@@ -220,19 +220,19 @@ class Polymer:
             plt.close()
         
 
-    def plot_interaction_matrix(self, save=True):
+    def plot_interaction_matrix(self, save=True, path="task_1/MM_interaction_energy.pdf"):
         """Plot interaction matrix
         """
         # Plot matrix
         fig = plt.figure()
         plt.title("Monomer-Monomer Interaction Energy")
-        sn.heatmap(self.MM_interaction_energy, annot=False, vmin=-4, vmax=-2,
+        sn.heatmap(self.MM_interaction_energy, annot=False, vmin=np.floor(self.MM_interaction_energy.min()), vmax=np.ceil(self.MM_interaction_energy.max()),
                     cbar_kws={"label": r"Energy $(k_b)$"})
         plt.xlabel("Amino acid")
         plt.ylabel("Amino acid")
         plt.show()
         if save:
-            fig.savefig(self.output_path + "task_1/MM_interaction_energy.pdf")
+            fig.savefig(self.output_path + path)
         plt.close()
     
     def find_nearest_neighbours(self):
@@ -332,7 +332,7 @@ class Polymer:
                 fig.savefig(self.output_path + "task_1/t13_energy_hist.pdf")
 
 
-    def MMC(self, MC_steps=1, use_threshold=True, threshold=1e-2,  N_thr=3, N_avg=100):
+    def MMC(self, MC_steps=1, use_threshold=True, threshold=1e-2,  N_thr=3, N_avg=100, SA=False):
         if self.NN is None:
             self.find_nearest_neighbours()
         if self.E is None:
@@ -346,7 +346,8 @@ class Polymer:
                                     self.njit_apply_transition,
                                     self.njit_find_nearest_neighbours,
                                     self.njit_calculate_energy,
-                                    use_threshold, threshold, N_thr, N_avg)
+                                    use_threshold, threshold, N_thr, N_avg,
+                                    SA=SA)
         
         # Update enrgy. Rest is updated by reference in function
         self.E = self.MMC_observables.get("E")[-1]
@@ -361,7 +362,8 @@ class Polymer:
         njit_apply_transition,
         njit_find_nearest_neighbours,
         njit_calculate_energy,
-        use_threshold=True, threshold=1e-2,  N_thr=3, N_avg=100):
+        use_threshold, threshold, N_thr, N_avg,
+        SA):
         """Metropolis Monte Carlo
         """
 
@@ -372,12 +374,16 @@ class Polymer:
             "e2e": np.zeros(MC_steps),
             "RoG": np.zeros(MC_steps)
         }
-        
+
         # For all steps/sweeps
         running_mean = np.zeros(MC_steps//N_avg)
         # while i < MC_steps and abs(slope) < threshold: 
         # while i < MC_steps and 
         for i in range(MC_steps):
+            # Simulated annealing temperature
+            if SA:
+                T = 3 * (1 - i / MC_steps) # T = 3 to T = 0 
+
             # Do N (#monomer) draws/trials
             for _ in range(monomers):
                 # Draw random monomer
@@ -559,7 +565,7 @@ class Polymer:
         plt.figure()
         plt.plot(temps, steps_needed)
         plt.title("MC Steps before equilibration")
-        plt.xlabel(r"Temperature (k_b)")
+        plt.xlabel(r"Temperature $(k_b)$")
         plt.ylabel("Steps")
         plt.show()
             
