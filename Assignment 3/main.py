@@ -56,8 +56,9 @@ def Task_1():
         P = Polymer(monomers=100, flexibility=0.0, T=1)
         P.find_nearest_neighbours()
         P.plot_polymer()
-        P.MMC(MC_steps=10000, plot_idxs=[1,10,100])
-        P.plot_polymer(MC_step=10000)
+        P.MMC(MC_steps=1); P.plot_polymer(MC_step=1)
+        P.MMC(MC_steps=9); P.plot_polymer(MC_step=10)
+        P.MMC(MC_steps=90); P.plot_polymer(MC_step=100)
         P.plot_MMC(running_mean_N=10)
 
         timer.end()
@@ -79,19 +80,27 @@ def Task_1():
         # P = Polymer(monomers=15, flexibility=0.0, T=10)
         # P.find_nearest_neighbours()
         # P.plot_polymer()
-        P = Polymer(monomers=50, flexibility=0.0, T=10)
-        P.remember_initial()
+        # P = Polymer(monomers=50, flexibility=0.0, T=10)
+        # P.remember_initial()
 
-        for T in np.linspace(1, 3, 10):
-            # Set back to initial state
-            P.reset_to_initial()
-            P.T = T
-            # P = Polymer(monomers=50, flexibility=0.0, T=T)
+        # for T in np.linspace(1, 3, 1):
+        #     # Set back to initial state
+        #     P.reset_to_initial()
+        #     P.T = T
+        #     # P = Polymer(monomers=50, flexibility=0.0, T=T)
 
-            timer.start(f"1.4 - T={T}")
-            P.MMC(MC_steps=10000, verbal=False)
-            timer.end()
-            P.plot_MMC(running_mean_N=10)
+        #     timer.start(f"1.4 - T={T}")
+        #     P.MMC(MC_steps=100000, use_threshold=True, threshold=1e-1, N_thr=5, N_avg=100)
+        #     timer.end()
+        #     P.plot_MMC(running_mean_N=10)
+
+        P = Polymer(monomers=15, flexibility=0.0, T=10)
+        P.MMC_time_to_equilibrium(
+            T_low=0.5, T_high=5, N=10,
+            max_MC_steps=1e5, threshold=0.1, N_thr=5, N_avg=100
+        )
+
+
         
 
 

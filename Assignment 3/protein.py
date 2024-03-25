@@ -332,7 +332,7 @@ class Polymer:
                 fig.savefig(self.output_path + "task_1/t13_energy_hist.pdf")
 
 
-    def MMC(self, MC_steps=1, plot_idxs=[], verbal=False):
+    def MMC(self, MC_steps=1, use_threshold=True, threshold=1e-2,  N_thr=3, N_avg=100):
         if self.NN is None:
             self.find_nearest_neighbours()
         if self.E is None:
@@ -345,14 +345,14 @@ class Polymer:
                                     self.njit_find_possible_transitions,
                                     self.njit_apply_transition,
                                     self.njit_find_nearest_neighbours,
-                                    self.njit_calculate_energy)
+                                    self.njit_calculate_energy,
+                                    use_threshold, threshold, N_thr, N_avg)
         
         # Update enrgy. Rest is updated by reference in function
         self.E = self.MMC_observables.get("E")[-1]
 
     @staticmethod
     @njit()
-    # def njit_MMC(self, MC_steps=1, plot_idxs=[], verbal=True):
     def njit_MMC(
         monomers, E, T, MC_steps,
         surrounding_coords, MM_interaction_energy,
@@ -360,15 +360,13 @@ class Polymer:
         njit_find_possible_transitions,
         njit_apply_transition,
         njit_find_nearest_neighbours,
-        njit_calculate_energy):
+        njit_calculate_energy,
+        use_threshold=True, threshold=1e-2,  N_thr=3, N_avg=100):
         """Metropolis Monte Carlo
         """
-        # if self.NN is None:
-        #     self.find_nearest_neighbours()
-        # if self.E is None:
-        #     self.calculate_energy()
 
-        # self.MMC_observables = {
+        MC_steps = int(MC_steps)
+
         MMC_observables = {
             "E": np.zeros(MC_steps),
             "e2e": np.zeros(MC_steps),
@@ -376,17 +374,13 @@ class Polymer:
         }
         
         # For all steps/sweeps
-        # if verbal:
-        #     looper = tqdm(range(MC_steps))
-        # else:
-        looper = range(MC_steps)
-
-        for i in looper:
+        running_mean = np.zeros(MC_steps//N_avg)
+        # while i < MC_steps and abs(slope) < threshold: 
+        # while i < MC_steps and 
+        for i in range(MC_steps):
             # Do N (#monomer) draws/trials
-            # for _ in range(self.monomers):
             for _ in range(monomers):
                 # Draw random monomer
-                # monomer_idx = np.random.randint(0, self.monomers)
                 monomer_idx = np.random.randint(0, monomers)
 
                 # Find possible transitions
@@ -423,11 +417,26 @@ class Polymer:
             center_of_mass = monomer_pos.sum(axis=0)/monomers
             MMC_observables["RoG"][i] = np.sqrt(((monomer_pos-center_of_mass)**2).sum(axis=1).sum()/monomers)
 
+            if use_threshold:
+                if i >= N_avg-1 and (i+1) % N_avg == 0:
+                    # np.convolve(MMC_observables["E"], np.ones(N_avg)/N_avg, mode="valid")
+                    # slope = np.polyfit(np.arange(len(i+1)), MMC_observables.get("E"), 1)[0]
+                    # print(slope)
+                    running_mean[i//N_avg] = np.mean(MMC_observables.get("E")[i+1-N_avg:i+1])
+                    
+                    # print(running_mean)
 
-            # if i in plot_idxs:
-            #     self.plot_polymer(MC_step=i)
+                    # Break if under threshold
+                    if i//N_avg >= N_thr:
+                        if np.sum((running_mean[i//N_avg-N_thr:i//N_avg+1] - np.mean(running_mean[i//N_avg-N_thr:i//N_avg+1]))**2) < threshold:
+                            break
+
+        # Remove unused values
+        if use_threshold and i < MC_steps:
+            for key, val in MMC_observables.items():
+                MMC_observables[key] = val[:i+1]
+
         return MMC_observables
-
 
     @staticmethod
     @njit
@@ -526,3 +535,31 @@ class Polymer:
         
         plt.tight_layout()
         plt.show()
+
+    
+    def MMC_time_to_equilibrium(self, T_low, T_high, N, max_MC_steps=1e5, threshold=1e-1, N_thr=5, N_avg=100):
+        self.remember_initial()
+
+        steps_needed = []
+        temps = np.linspace(T_low, T_high, N)
+
+        for T in tqdm(temps):
+            # Set back to initial state
+            self.reset_to_initial()
+            self.T = T
+
+            # Do Monte Carlo
+            self.MMC(MC_steps=max_MC_steps, use_threshold=True, threshold=threshold, N_thr=N_thr, N_avg=N_avg)
+
+            # Save amount of steps
+            steps_needed.append(len(self.MMC_observables.get("E")))
+
+            self.plot_MMC(running_mean_N=10)
+
+        plt.figure()
+        plt.plot(temps, steps_needed)
+        plt.title("MC Steps before equilibration")
+        plt.xlabel(r"Temperature (k_b)")
+        plt.ylabel("Steps")
+        plt.show()
+            
