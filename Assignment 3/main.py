@@ -11,16 +11,19 @@ from protein import Polymer
 import numpy as np
 
 # Choose tasks to run
-TASK_1 = True
+TASK_1 = False
+TASK_2 = True
 
 # Subtasks (only if super is true)
-TASK_1_1 = True
-TASK_1_2 = True
-TASK_1_3 = True
-TASK_1_4 = True
+TASK_1_1 = False
+TASK_1_2 = False
+TASK_1_3 = False
+TASK_1_4 = False
 TASK_1_5 = True
-TASK_1_6 = True
-TASK_1_7 = True
+TASK_1_6 = False
+TASK_1_7 = False
+
+TASK_2_2 = True
 
 
 def Task_1():
@@ -80,9 +83,9 @@ def Task_1():
         # T =  9: Unfolded
         # T = 10: Unfolded
 
-        P = Polymer(monomers=100, flexibility=0.0, T=10)
+        P = Polymer(monomers=15, flexibility=0.0, T=10)
         P.MMC_time_to_equilibrium(
-            T_low=0.5, T_high=3, N=20,
+            T_low=0.5, T_high=3, N=2,
             max_MC_steps=1e5, threshold=0.1, N_thr=5, N_avg=100
         )
 
@@ -142,8 +145,29 @@ def Task_1():
 
         timer.end()
 
+
+def Task_2():
+    timer = Timer()
+
+    if TASK_2_2: 
+        timer.start("2.2")
+
+        P = Polymer(monomers=15, flexibility=0.0, dims=2, T=10)
+        P.find_nearest_neighbours()
+        P.plot_polymer()
+        P.MMC(MC_steps=1); P.plot_polymer(MC_step=1)
+        P.MMC(MC_steps=9); P.plot_polymer(MC_step=10)
+        P.MMC(MC_steps=90); P.plot_polymer(MC_step=100)
+        P.plot_MMC(running_mean_N=10)
+
+        timer.end()
+
 if __name__ == '__main__':
-    Task_1()
+    if TASK_1:
+        Task_1()
+
+    if TASK_2:
+        Task_2()
 
 
 # Questions:

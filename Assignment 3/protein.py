@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import seaborn as sn
 import matplotlib.pyplot as plt
+from mpl_toolkits import mplot3d
 import os
 from numba import njit
 from itertools import product
@@ -51,12 +52,12 @@ class Polymer:
         
         # Grid to store monomer indexes: int16 max 32767/2 monomers 
         if dims == 2:
-            self.monomer_grid = np.zeros((self.grid_size, self.grid_size), dtype=np.int16) - 1
+            self.monomer_grid = np.zeros((self.grid_size, self.grid_size, 1), dtype=np.int16) - 1
         else:
             self.monomer_grid = np.zeros((self.grid_size, self.grid_size, self.grid_size), dtype=np.int16) - 1
 
         # Ordered list of monomer positions
-        self.monomer_pos = np.zeros((monomers, self.dims), dtype=np.int16)
+        self.monomer_pos = np.zeros((monomers, 3), dtype=np.int16)
 
         # Ordered list with monomer amino acid number
         self.monomer_AA_number = np.zeros(monomers, dtype=np.uint8)
@@ -72,6 +73,10 @@ class Polymer:
         self.surrounding_coords = np.asarray(list(product([-1,0,1], repeat=self.dims)), dtype=np.int16)
         # Remove origin (0,0(,0))
         self.surrounding_coords = self.surrounding_coords[~((self.surrounding_coords**2).sum(axis=1)==0),:]
+        # Add empty axis if 2d
+        if self.dims == 2:
+        #     self.surrounding_coords = self.surrounding_coords[...,None]
+            self.surrounding_coords = np.hstack((self.surrounding_coords, np.zeros((self.surrounding_coords.shape[0],1), dtype=np.int16)))
 
         # Without corners
         self.surrounding_coords_cross = self.surrounding_coords[((self.surrounding_coords**2).sum(axis=1)==1),:]
@@ -104,15 +109,15 @@ class Polymer:
         self.monomer_AA_number[:] = 0
 
         # Start the monomer center (x, y [,z])
-        pos = np.ones(self.dims, dtype=np.int16) * (self.grid_size // 2)
+        pos = np.ones(3, dtype=np.int16) * (self.grid_size // 2)
+
+        if self.dims == 2:
+            pos[-1] = 0
 
         # Rotation matrix for direction change
         if self.dims == 2:
-            rotate = np.array([[0, 1], [-1, 0]], dtype=np.int8)
+            rotate = np.array([[0,1,0],[-1,0,0],[0,0,0]], dtype=np.int8)
         else:
-            # rotate = np.array([[0, 1], [-1, 0]], dtype=np.int8)
-            # print(f'Dimension 3d is not implemented in _init_polymer')
-
             Rx = np.array([[1,0,0],[0,0,-1],[0,1,0]])
             Ry = np.array([[0,0,1],[0,1,0],[-1,0,0]])
             Rz = np.array([[0,-1,0],[1,0,0],[0,0,1]])
@@ -120,11 +125,11 @@ class Polymer:
             rotate = [Rx, Ry, Rz]
 
         # Direction to move x, y [,z]
-        direction = np.zeros(self.dims, dtype=np.int8)
+        direction = np.zeros(3, dtype=np.int8)
 
         # Make start direction random
         direction[np.random.randint(0, self.dims)] = 1 if np.random.random() > .5 else -1
-        
+
         # Make polymer
         for i in range(self.monomers):
             # Store original direction for 3d rotations
@@ -184,7 +189,7 @@ class Polymer:
             pos += direction
 
             # Create random amino acid and save
-            self.monomer_grid[pos[0], pos[1]] = i # Sequential monomer number
+            self.monomer_grid[pos[0], pos[1], pos[2]] = i # Sequential monomer number
             self.monomer_pos[i] = pos
             self.monomer_AA_number[i] = np.random.randint(0, 20, dtype=np.uint8)
 
@@ -207,30 +212,51 @@ class Polymer:
         show = False
         if ax is None:
             show = True
-            fig, ax = plt.subplots()
+            if self.dims == 2:
+                fig, ax = plt.subplots()
+            else:
+                fig = plt.figure()
+                ax = plt.axes(projection="3d")
 
         if MC_step > -1:
             ax.set_title(f"MC Step {MC_step}")
 
         # Plot polymer line
-        ax.plot(self.monomer_pos[:, 0], self.monomer_pos[:, 1], color="k")
+        if self.dims == 2:
+            ax.plot(self.monomer_pos[:, 0], self.monomer_pos[:, 1], color="k")
+        else:
+            ax.plot3D(self.monomer_pos[:, 0], self.monomer_pos[:, 1], self.monomer_pos[:, 2], color="k")
+
         
         # Plot nearest neighbours
         if self.NN is not None:
             for pair in self.NN:
-                try:
-                    ax.plot(
-                        [self.monomer_pos[pair[0],0], self.monomer_pos[pair[1],0]],
-                        [self.monomer_pos[pair[0],1], self.monomer_pos[pair[1],1]],
-                        '--', color="r", linewidth=1)
-                except:
-                    print(f"Failed at pair {pair}")
+                if self.dims == 2:
+                    try:
+                        ax.plot(
+                            [self.monomer_pos[pair[0],0], self.monomer_pos[pair[1],0]],
+                            [self.monomer_pos[pair[0],1], self.monomer_pos[pair[1],1]],
+                            '--', color="r", linewidth=1)
+                    except:
+                        print(f"Failed at pair {pair}")
+                else:
+                    try:
+                        ax.plot3D(
+                            [self.monomer_pos[pair[0],0], self.monomer_pos[pair[1],0]],
+                            [self.monomer_pos[pair[0],1], self.monomer_pos[pair[1],1]],
+                            [self.monomer_pos[pair[0],2], self.monomer_pos[pair[1],2]],
+                            '--', color="r", linewidth=1)
+                    except:
+                        print(f"Failed at pair {pair}")
                 
         # Show number and use colormap to show which amino acid
         cm = plt.get_cmap('tab20')
         for i in range(self.monomers):
-            ax.plot(self.monomer_pos[i, 0], self.monomer_pos[i, 1], 'o', color=cm(self.monomer_AA_number[i]))
-            ax.text(self.monomer_pos[i, 0]-0.25, self.monomer_pos[i, 1]-0.25, str(i))
+            if self.dims == 2:
+                ax.plot(self.monomer_pos[i, 0], self.monomer_pos[i, 1], 'o', color=cm(self.monomer_AA_number[i]))
+                ax.text(self.monomer_pos[i, 0]-0.25, self.monomer_pos[i, 1]-0.25, str(i))
+            else:
+                ax.plot(self.monomer_pos[i, 0], self.monomer_pos[i, 1], self.monomer_pos[i, 2], 'o', color=cm(self.monomer_AA_number[i]))
 
         # Prettify
         ax.grid(True, linestyle='--')
@@ -242,6 +268,13 @@ class Polymer:
         ax.set_xticks(xticks)
         ax.set_xticklabels([])
         ax.set_yticklabels([])
+
+        if self.dims == 3:
+            ax.set_zlim([self.monomer_pos[:,2].max()+0.5, self.monomer_pos[:,2].min()-0.5])
+            zticks = np.arange(self.monomer_pos[:,2].min(), self.monomer_pos[:,2].max()+1)
+            ax.set_zticks(zticks)
+            ax.set_zticklabels([])
+
         ax.set_aspect("equal")
         # Border
         for axis in ['top', 'bottom', 'left', 'right']:
@@ -279,7 +312,6 @@ class Polymer:
     def njit_find_nearest_neighbours(monomers, monomer_pos, monomer_grid, surrounding_coords):
         # Pairs of connecting monomers
         # [[monomer5, monomer9],...]
-        dim = len(monomer_grid.shape)
         NN = np.array([[0,0]], dtype=np.uint8)
         new_connection = np.array([[0,0]], dtype=np.uint8)
 
@@ -288,14 +320,14 @@ class Polymer:
 
             for coord in cur_surrounding_coords:
                 # Only if not empty and not next or previous in covalent bonds
-                if monomer_grid[coord[0], coord[1]] not in [-1, i-1, i+1]:
+                if monomer_grid[coord[0], coord[1], coord[2]] not in [-1, i-1, i+1]:
                 
                     # Set new connection
                     new_connection[0,0] = i
-                    new_connection[0,1] = monomer_grid[coord[0], coord[1]]
+                    new_connection[0,1] = monomer_grid[coord[0], coord[1], coord[2]]
 
                     # Check if opposite is not there already
-                    if ((new_connection[0,::-1]==NN).sum(axis=1)==dim).sum()==0:
+                    if ((new_connection[0,::-1]==NN).sum(axis=1)==2).sum()==0:
                         NN = np.vstack((NN, new_connection))
 
         return NN[1:]
@@ -360,16 +392,16 @@ class Polymer:
         if self.E is None:
             self.calculate_energy()
 
-        self.MMC_observables = self.njit_MMC(
-                                    self.monomers, self.E, self.T, MC_steps,
-                                    self.surrounding_coords, self.MM_interaction_energy,
-                                    self.monomer_grid, self.monomer_pos, self.monomer_AA_number, self.NN,
-                                    self.njit_find_possible_transitions,
-                                    self.njit_apply_transition,
-                                    self.njit_find_nearest_neighbours,
-                                    self.njit_calculate_energy,
-                                    use_threshold, threshold, N_thr, N_avg,
-                                    SA=SA)
+        self.MMC_observables, self.NN = self.njit_MMC(
+                                            self.monomers, self.E, self.T, MC_steps,
+                                            self.surrounding_coords, self.surrounding_coords_cross, self.MM_interaction_energy,
+                                            self.monomer_grid, self.monomer_pos, self.monomer_AA_number, self.NN,
+                                            self.njit_find_possible_transitions,
+                                            self.njit_apply_transition,
+                                            self.njit_find_nearest_neighbours,
+                                            self.njit_calculate_energy,
+                                            use_threshold, threshold, N_thr, N_avg,
+                                            SA=SA)
         
         # Update enrgy. Rest is updated by reference in function
         self.E = self.MMC_observables.get("E")[-1]
@@ -378,7 +410,7 @@ class Polymer:
     @njit()
     def njit_MMC(
         monomers, E, T, MC_steps,
-        surrounding_coords, MM_interaction_energy,
+        surrounding_coords, surrounding_coords_cross, MM_interaction_energy,
         monomer_grid, monomer_pos, monomer_AA_number, NN,
         njit_find_possible_transitions,
         njit_apply_transition,
@@ -395,6 +427,7 @@ class Polymer:
             "E": np.zeros(MC_steps),
             "e2e": np.zeros(MC_steps),
             "RoG": np.zeros(MC_steps)
+            # "NN": np.array([[0,0]], dtype=np.uint8)
         }
 
         # For all steps/sweeps
@@ -402,7 +435,7 @@ class Polymer:
         for i in range(MC_steps):
             # Simulated annealing temperature
             if SA:
-                T = 3 * (1 - i / MC_steps) # T = 3 to T = 0 
+                T = 3 - 2 * i / MC_steps # T = 3 to T = 1
 
             # Do N (#monomer) draws/trials
             for _ in range(monomers):
@@ -421,7 +454,7 @@ class Polymer:
 
                 # Find nearest neighbours
                 old_NN = NN.copy()
-                NN = njit_find_nearest_neighbours(monomers, monomer_pos, monomer_grid)
+                NN = njit_find_nearest_neighbours(monomers, monomer_pos, monomer_grid, surrounding_coords_cross)
                 
                 # Calculate new energy
                 old_E = E
@@ -457,7 +490,10 @@ class Polymer:
             for key, val in MMC_observables.items():
                 MMC_observables[key] = val[:i+1]
 
-        return MMC_observables
+        # Return NN as it is not changed by reference
+        # MMC_observables["NN"] = NN
+
+        return MMC_observables, NN
 
     @staticmethod
     @njit
@@ -465,20 +501,17 @@ class Polymer:
         """Given a grid of monomers, find legal transitions
 
         Args:
-            monomer_grid (np.ndarray): 2d or 3d grid where empty space is -1.
+            monomer_grid (np.ndarray): 3d grid where empty space is -1.
         """
-        possible_transitions = np.zeros((1, monomer_pos.shape[1]), dtype=np.int8)
+        possible_transitions = np.zeros((1, 3), dtype=np.int16)
 
-        # if len(monomer_grid.shape) == 2:
-            # Check surrounding positions for free space
+        # Check surrounding positions for free space
         for direction in surrounding_coords:
             new_pos = monomer_pos[monomer_idx] + direction
-            if monomer_pos.shape[1] == 2:
-                if monomer_grid[new_pos[0], new_pos[1]] != -1:
-                    continue
-            else: # 3d
-                if monomer_grid[new_pos[0], new_pos[1], new_pos[2]] != -1:
-                    continue
+
+            # If empty
+            if monomer_grid[new_pos[0], new_pos[1], new_pos[2]] != -1:
+                continue
 
             # Check if covalent bonds lengths still are 1
             if monomer_idx < monomer_pos.shape[0]-1:
@@ -509,19 +542,13 @@ class Polymer:
 
 
         # Delete old position
-        if monomer_pos.shape[1] == 2:
-            monomer_grid[monomer_pos[monomer_idx,0], monomer_pos[monomer_idx,1]] = -1
-        else: # 3d
-            monomer_grid[monomer_pos[monomer_idx,0], monomer_pos[monomer_idx,1], monomer_pos[monomer_idx,2]] = -1
+        monomer_grid[monomer_pos[monomer_idx,0], monomer_pos[monomer_idx,1], monomer_pos[monomer_idx,2]] = -1
             
         # Change monomer_pos
         monomer_pos[monomer_idx] += direction
 
         # Add new position
-        if monomer_pos.shape[1] == 2:
-            monomer_grid[monomer_pos[monomer_idx,0], monomer_pos[monomer_idx,1]] = monomer_idx
-        else:
-            monomer_grid[monomer_pos[monomer_idx,0], monomer_pos[monomer_idx,1], monomer_pos[monomer_idx,2]] = monomer_idx
+        monomer_grid[monomer_pos[monomer_idx,0], monomer_pos[monomer_idx,1], monomer_pos[monomer_idx,2]] = monomer_idx
 
     def plot_MMC(self, running_mean_N=3):
         """Plot observables from MMC
@@ -559,7 +586,10 @@ class Polymer:
         ax.set_xlabel("MC Step")
         ax.set_ylabel(r"RoG")
 
-        ax = plt.subplot(122)
+        if self.dims == 2:
+            ax = plt.subplot(122)
+        else:
+            ax = plt.subplot(122, projection="3d")
         self.plot_polymer(ax=ax, MC_step=len(self.MMC_observables.get("RoG")))
         
         plt.tight_layout()
