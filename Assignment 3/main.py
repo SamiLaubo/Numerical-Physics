@@ -14,12 +14,12 @@ import numpy as np
 TASK_1 = True
 
 # Subtasks (only if super is true)
-TASK_1_1 = False
-TASK_1_2 = False
-TASK_1_3 = False
-TASK_1_4 = False
-TASK_1_5 = False
-TASK_1_6 = False
+TASK_1_1 = True
+TASK_1_2 = True
+TASK_1_3 = True
+TASK_1_4 = True
+TASK_1_5 = True
+TASK_1_6 = True
 TASK_1_7 = True
 
 

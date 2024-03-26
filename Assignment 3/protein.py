@@ -49,8 +49,11 @@ class Polymer:
         self.beta = 1 / T # 1/TkB: kb=1
         self.dims = dims # 2d or 3d
         
-        # Grid to store monomer indexes: int16 max 32767/2 monomers
-        self.monomer_grid = np.zeros((self.grid_size, self.grid_size), dtype=np.int16) - 1
+        # Grid to store monomer indexes: int16 max 32767/2 monomers 
+        if dims == 2:
+            self.monomer_grid = np.zeros((self.grid_size, self.grid_size), dtype=np.int16) - 1
+        else:
+            self.monomer_grid = np.zeros((self.grid_size, self.grid_size, self.grid_size), dtype=np.int16) - 1
 
         # Ordered list of monomer positions
         self.monomer_pos = np.zeros((monomers, self.dims), dtype=np.int16)
@@ -66,9 +69,12 @@ class Polymer:
         self.E = None
 
         # Direction to surrounding coordinates in 2d and 3d with "corners"
-        self.surrounding_coords = np.asarray(list(product([-1,0,1], repeat=self.dims)), dtype=np.int8)
+        self.surrounding_coords = np.asarray(list(product([-1,0,1], repeat=self.dims)), dtype=np.int16)
         # Remove origin (0,0(,0))
         self.surrounding_coords = self.surrounding_coords[~((self.surrounding_coords**2).sum(axis=1)==0),:]
+
+        # Without corners
+        self.surrounding_coords_cross = self.surrounding_coords[((self.surrounding_coords**2).sum(axis=1)==1),:]
 
 
     def dir_setup(self, output_path):
@@ -88,7 +94,6 @@ class Polymer:
             if self._init_polymer(): break
 
         assert i != tries-1, "Polymer initialisation got stuck"
-        # print(f'Polymer initialisation used {i}/{tries} tries.')
 
     def _init_polymer(self):
         """Create initial polymer
@@ -98,48 +103,78 @@ class Polymer:
         self.monomer_pos[:] = 0
         self.monomer_AA_number[:] = 0
 
-        # Start the monomer center (y, x, [z])
+        # Start the monomer center (x, y [,z])
         pos = np.ones(self.dims, dtype=np.int16) * (self.grid_size // 2)
 
         # Rotation matrix for direction change
         if self.dims == 2:
             rotate = np.array([[0, 1], [-1, 0]], dtype=np.int8)
         else:
-            rotate = np.array([[0, 1], [-1, 0]], dtype=np.int8)
-            print(f'Dimension 3d is not implemented in _init_polymer')
+            # rotate = np.array([[0, 1], [-1, 0]], dtype=np.int8)
+            # print(f'Dimension 3d is not implemented in _init_polymer')
 
-        # Direction to move y, x [,z]
+            Rx = np.array([[1,0,0],[0,0,-1],[0,1,0]])
+            Ry = np.array([[0,0,1],[0,1,0],[-1,0,0]])
+            Rz = np.array([[0,-1,0],[1,0,0],[0,0,1]])
+
+            rotate = [Rx, Ry, Rz]
+
+        # Direction to move x, y [,z]
         direction = np.zeros(self.dims, dtype=np.int8)
 
         # Make start direction random
-        xory = 1*(np.random.random() > .5)
-        posorneg = 1 - 2*(np.random.random() > .5)
-        direction[xory] = posorneg
+        direction[np.random.randint(0, self.dims)] = 1 if np.random.random() > .5 else -1
         
         # Make polymer
         for i in range(self.monomers):
+            # Store original direction for 3d rotations
+            org_direction = np.where(direction**2==1)[0][0]
+
             # Change direction based on flexibility
             # flexibility = probability of not continuing straight
             if np.random.random() < self.flexibility:
-                # Rotate 90 deg clockwise or ccw
-                if np.random.random() < .5:
-                    direction = rotate @ direction
-                else:
-                    direction = -rotate @ direction
+                if self.dims == 2:
+                    # Rotate 90 deg clockwise or ccw
+                    if np.random.random() < .5:
+                        direction = rotate @ direction
+                    else:
+                        direction = -rotate @ direction
+                else: # 3d
+                    # Choose random axis to flip around
+                    rand_axis = np.random.random(3)
+
+                    # Want new direction orthogonal to current
+                    rand_axis[0] = 0
+
+                    # Axis to flip around
+                    flip_axis = np.argmax(rand_axis)
+
+                    # Random sign
+                    if np.random.random() < .5:
+                        direction = rotate[flip_axis] @ direction
+                    else:
+                        direction = -rotate[flip_axis] @ direction
 
             # Avoid self
             # Random direction of rotation if colliding
             cw = np.random.random() < .5
             for ii in range(4):
                 # Direction works
-                if self.monomer_grid[pos[0]+direction[0], pos[1]+direction[1]] == -1:
+                if self.monomer_grid[tuple(pos+direction)] == -1:
                     break
+
                 # Go to other possible direction
                 else:
                     if cw:
-                        direction = rotate @ direction
+                        if self.dims == 2:
+                            direction = rotate @ direction
+                        else:
+                            direction = rotate[org_direction] @ direction # Rotate around original direction axis
                     else:
-                        direction = -rotate @ direction
+                        if self.dims == 2:
+                            direction = -rotate @ direction
+                        else:
+                            direction = -rotate[org_direction] @ direction
             
             # No direction possible
             if ii == 3:
@@ -149,10 +184,8 @@ class Polymer:
             pos += direction
 
             # Create random amino acid and save
-            # amino_acid_number = np.random.randint(0, 20, dtype=np.uint8)
             self.monomer_grid[pos[0], pos[1]] = i # Sequential monomer number
             self.monomer_pos[i] = pos
-            # self.monomer_pos[i,-1] = amino_acid_number
             self.monomer_AA_number[i] = np.random.randint(0, 20, dtype=np.uint8)
 
         # Success
@@ -239,35 +272,24 @@ class Polymer:
         """Generate list of nearesest neighbours for all monomers
         """
         
-        self.NN = self.njit_find_nearest_neighbours(self.monomers, self.monomer_pos, self.monomer_grid)
+        self.NN = self.njit_find_nearest_neighbours(self.monomers, self.monomer_pos, self.monomer_grid, self.surrounding_coords_cross)
 
     @staticmethod
     @njit # Compile with Numba
-    def njit_find_nearest_neighbours(monomers, monomer_pos, monomer_grid):
+    def njit_find_nearest_neighbours(monomers, monomer_pos, monomer_grid, surrounding_coords):
         # Pairs of connecting monomers
-        # [[monomer5, monomer9],...] or eqv in 3d 
+        # [[monomer5, monomer9],...]
         dim = len(monomer_grid.shape)
         NN = np.array([[0,0]], dtype=np.uint8)
         new_connection = np.array([[0,0]], dtype=np.uint8)
 
-        get_surrounding_coords = np.array([[0,1],[1,0],[0,-1],[-1,0]])
         for i in range(monomers):
-            surrounding_coords = monomer_pos[i] - get_surrounding_coords            
+            cur_surrounding_coords = monomer_pos[i] - surrounding_coords      
 
-            for coord in surrounding_coords:
-                # if i > 0:
-                #     if np.array_equal(coord, monomer_pos[i-1]):
-                #         continue
-                # if i < monomers-1:
-                #     if np.array_equal(coord, monomer_pos[i+1]):
-                #         continue
-                # Skip if previous or next monomer
-
+            for coord in cur_surrounding_coords:
                 # Only if not empty and not next or previous in covalent bonds
                 if monomer_grid[coord[0], coord[1]] not in [-1, i-1, i+1]:
                 
-                # Neighbouring monomer
-                # if monomer_grid[coord[0], coord[1]] != -1:
                     # Set new connection
                     new_connection[0,0] = i
                     new_connection[0,1] = monomer_grid[coord[0], coord[1]]
@@ -377,8 +399,6 @@ class Polymer:
 
         # For all steps/sweeps
         running_mean = np.zeros(MC_steps//N_avg)
-        # while i < MC_steps and abs(slope) < threshold: 
-        # while i < MC_steps and 
         for i in range(MC_steps):
             # Simulated annealing temperature
             if SA:
@@ -425,13 +445,8 @@ class Polymer:
 
             if use_threshold:
                 if i >= N_avg-1 and (i+1) % N_avg == 0:
-                    # np.convolve(MMC_observables["E"], np.ones(N_avg)/N_avg, mode="valid")
-                    # slope = np.polyfit(np.arange(len(i+1)), MMC_observables.get("E"), 1)[0]
-                    # print(slope)
                     running_mean[i//N_avg] = np.mean(MMC_observables.get("E")[i+1-N_avg:i+1])
                     
-                    # print(running_mean)
-
                     # Break if under threshold
                     if i//N_avg >= N_thr:
                         if np.sum((running_mean[i//N_avg-N_thr:i//N_avg+1] - np.mean(running_mean[i//N_avg-N_thr:i//N_avg+1]))**2) < threshold:
@@ -450,30 +465,34 @@ class Polymer:
         """Given a grid of monomers, find legal transitions
 
         Args:
-            monomer_grid (np.ndarray): 2d or 3d grid where monomers are 0-19 and empty space is -1
+            monomer_grid (np.ndarray): 2d or 3d grid where empty space is -1.
         """
         possible_transitions = np.zeros((1, monomer_pos.shape[1]), dtype=np.int8)
 
-        if len(monomer_grid.shape) == 2:
+        # if len(monomer_grid.shape) == 2:
             # Check surrounding positions for free space
-            for direction in surrounding_coords:
-                new_pos = monomer_pos[monomer_idx] + direction
+        for direction in surrounding_coords:
+            new_pos = monomer_pos[monomer_idx] + direction
+            if monomer_pos.shape[1] == 2:
                 if monomer_grid[new_pos[0], new_pos[1]] != -1:
                     continue
+            else: # 3d
+                if monomer_grid[new_pos[0], new_pos[1], new_pos[2]] != -1:
+                    continue
 
-                # Check if covalent bonds lengths still are 1
-                if monomer_idx < monomer_pos.shape[0]-1:
-                    # Manhattan distance needs to be 1 to next monomer
-                    if np.abs(new_pos - monomer_pos[monomer_idx+1]).sum() != 1:
-                        continue
-                if monomer_idx > 0:
-                    # Manhattan distance needs to be 1 to previous monomer
-                    if np.abs(new_pos - monomer_pos[monomer_idx-1]).sum() != 1:
-                        continue
+            # Check if covalent bonds lengths still are 1
+            if monomer_idx < monomer_pos.shape[0]-1:
+                # Manhattan distance needs to be 1 to next monomer
+                if np.abs(new_pos - monomer_pos[monomer_idx+1]).sum() != 1:
+                    continue
+            if monomer_idx > 0:
+                # Manhattan distance needs to be 1 to previous monomer
+                if np.abs(new_pos - monomer_pos[monomer_idx-1]).sum() != 1:
+                    continue
 
-                possible_transitions = np.vstack((possible_transitions, direction[None,:]))
+            possible_transitions = np.vstack((possible_transitions, direction[None,:]))
 
-            return possible_transitions[1:]    
+        return possible_transitions[1:]    
 
 
     @staticmethod
@@ -490,15 +509,19 @@ class Polymer:
 
 
         # Delete old position
-        if len(monomer_pos.shape) == 2:
+        if monomer_pos.shape[1] == 2:
             monomer_grid[monomer_pos[monomer_idx,0], monomer_pos[monomer_idx,1]] = -1
+        else: # 3d
+            monomer_grid[monomer_pos[monomer_idx,0], monomer_pos[monomer_idx,1], monomer_pos[monomer_idx,2]] = -1
             
         # Change monomer_pos
         monomer_pos[monomer_idx] += direction
 
         # Add new position
-        if len(monomer_pos.shape) == 2:
+        if monomer_pos.shape[1] == 2:
             monomer_grid[monomer_pos[monomer_idx,0], monomer_pos[monomer_idx,1]] = monomer_idx
+        else:
+            monomer_grid[monomer_pos[monomer_idx,0], monomer_pos[monomer_idx,1], monomer_pos[monomer_idx,2]] = monomer_idx
 
     def plot_MMC(self, running_mean_N=3):
         """Plot observables from MMC
