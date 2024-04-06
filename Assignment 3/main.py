@@ -20,9 +20,9 @@ TASK_1_2 = False
 TASK_1_3 = False
 TASK_1_5 = False
 TASK_1_6 = False
-TASK_1_7 = True
+TASK_1_7 = False
 TASK_1_8 = False
-TASK_1_9 = False
+TASK_1_9 = True
 
 TASK_2_2 = True
 TASK_2_3 = True
@@ -131,21 +131,21 @@ def Task_1():
         timer.start("1.8")
 
         # a
-        P = Polymer(monomers=30, flexibility=0.0, T=1)
+        P = Polymer(monomers=30, flexibility=0.2, T=1)
         P.remember_initial()
         
         # Find two teriary structures
         P.MMC(MC_steps=10000, use_threshold=False)
-        P.plot_MMC()
+        P.plot_MMC(running_mean_N=500, path="output/task_1/t18_tertiary_1.pdf")
 
         P.reset_to_initial()
         P.MMC(MC_steps=10000, use_threshold=False)
-        P.plot_MMC()
+        P.plot_MMC(running_mean_N=500, path="output/task_1/t18_tertiary_2.pdf")
 
         # b - With simulated annealing (SA)
         P.reset_to_initial()
-        P.MMC(MC_steps=1000, use_threshold=False, SA=True)
-        P.plot_MMC()
+        P.MMC(MC_steps=2000, use_threshold=False, SA=True)
+        P.plot_MMC(running_mean_N=100, path="output/task_1/t18_tertiary_SA.pdf")
 
 
         timer.end()
@@ -154,30 +154,33 @@ def Task_1():
         timer.start("1.9")
 
         # Change some interaction signs
-        for _ in range(6):
-            # Choose random monomer-monomer interaction
-            AA1 = np.random.randint(0, 20)
-            AA2 = np.random.randint(0, 20)
+        # for _ in range(6):
+        #     # Choose random monomer-monomer interaction
+        #     AA1 = np.random.randint(0, 20)
+        #     AA2 = np.random.randint(0, 20)
 
-            # Change both terms
-            Polymer.MM_interaction_energy[AA1, AA2] *= -1
+        #     # Change both terms
+        #     Polymer.MM_interaction_energy[AA1, AA2] *= -1
 
-            if AA1 != AA2: # Not diagonal
-                Polymer.MM_interaction_energy[AA2, AA1] *= -1
+        #     if AA1 != AA2: # Not diagonal
+        #         Polymer.MM_interaction_energy[AA2, AA1] *= -1
 
-        P = Polymer(monomers=50, flexibility=0.0, T=1)
-        P.plot_interaction_matrix(save=False)
+        P = Polymer(monomers=50, flexibility=0.2, T=1)
+        P.plot_interaction_matrix(save=True, path="task_1/t19_MM_interactions.pdf")
 
         P.MMC(MC_steps=10000, use_threshold=False, SA=True)
-        P.plot_MMC()
+        print(P.monomer_AA_number)
+        P.plot_MMC(running_mean_N=500)
         
-        P = Polymer(monomers=50, flexibility=0.0, T=1)
+        P = Polymer(monomers=50, flexibility=0.3, T=1)
+        print(P.monomer_AA_number)
         P.MMC(MC_steps=10000, use_threshold=False, SA=True)
-        P.plot_MMC()
+        P.plot_MMC(running_mean_N=500)
 
-        P = Polymer(monomers=50, flexibility=0.0, T=1)
+        P = Polymer(monomers=50, flexibility=0.4, T=1)
+        print(P.monomer_AA_number)
         P.MMC(MC_steps=10000, use_threshold=False, SA=True)
-        P.plot_MMC()
+        P.plot_MMC(running_mean_N=500)
 
         timer.end()
 

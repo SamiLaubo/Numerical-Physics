@@ -448,7 +448,7 @@ class Polymer:
         for i in range(MC_steps):
             # Simulated annealing temperature
             if SA:
-                T = 3 - 2 * i / MC_steps # T = 3 to T = 1
+                T = 4 - 3 * i / MC_steps # T = 4 to T = 1
 
             # Do N (#monomer) draws/trials
             for _ in range(monomers):
