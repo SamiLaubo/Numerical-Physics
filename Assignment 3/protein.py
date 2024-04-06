@@ -207,8 +207,11 @@ class Polymer:
         self.find_nearest_neighbours()
         self.calculate_energy()
 
+        if hasattr(self, "MMC_observables"):
+            del self.MMC_observables
 
-    def plot_polymer(self, MC_step=-1, ax=None):
+
+    def plot_polymer(self, MC_step=-1, ax=None, path=""):
         show = False
         if ax is None:
             show = True
@@ -281,6 +284,9 @@ class Polymer:
             ax.spines[axis].set_linewidth(2.5)
             ax.spines[axis].set_color('black')
         
+        if len(path) > 0:
+            fig.savefig(path)
+
         if show:
             plt.show()
             plt.close()
@@ -379,7 +385,7 @@ class Polymer:
         if plot:
             fig = plt.figure()
             sn.histplot(E_list, bins=bins, color="k")
-            plt.xlabel(r"$Energy (k_b)$")
+            plt.xlabel(r"Energy $(k_b)$")
             plt.title("Energy histogram of tertiary structures")
             plt.show()
             if save:
@@ -392,7 +398,7 @@ class Polymer:
         if self.E is None:
             self.calculate_energy()
 
-        self.MMC_observables, self.NN = self.njit_MMC(
+        MMC_observables, self.NN = self.njit_MMC(
                                             self.monomers, self.E, self.T, MC_steps,
                                             self.surrounding_coords, self.surrounding_coords_cross, self.MM_interaction_energy,
                                             self.monomer_grid, self.monomer_pos, self.monomer_AA_number, self.NN,
@@ -403,7 +409,15 @@ class Polymer:
                                             use_threshold, threshold, N_thr, N_avg,
                                             SA=SA)
         
-        # Update enrgy. Rest is updated by reference in function
+        # Store new observables
+        if hasattr(self, "MMC_observables"):
+            self.MMC_observables["E"] = np.concatenate((self.MMC_observables.get("E"), MMC_observables.get("E")))
+            self.MMC_observables["e2e"] = np.concatenate((self.MMC_observables.get("e2e"), MMC_observables.get("e2e")))
+            self.MMC_observables["RoG"] = np.concatenate((self.MMC_observables.get("RoG"), MMC_observables.get("RoG")))
+        else:
+            self.MMC_observables = MMC_observables
+
+        # Update energy. Rest is updated by reference in function
         self.E = self.MMC_observables.get("E")[-1]
 
     @staticmethod
@@ -427,7 +441,6 @@ class Polymer:
             "E": np.zeros(MC_steps),
             "e2e": np.zeros(MC_steps),
             "RoG": np.zeros(MC_steps)
-            # "NN": np.array([[0,0]], dtype=np.uint8)
         }
 
         # For all steps/sweeps
@@ -550,35 +563,40 @@ class Polymer:
         # Add new position
         monomer_grid[monomer_pos[monomer_idx,0], monomer_pos[monomer_idx,1], monomer_pos[monomer_idx,2]] = monomer_idx
 
-    def plot_MMC(self, running_mean_N=3):
+    def plot_MMC(self, running_mean_N=3, path="", plot_polymer=True):
         """Plot observables from MMC
         """
 
         # Energy
         fig = plt.figure()
-        # fig, axs = plt.subplots(3, 2, sharex=True)
-        # axs = axs.ravel()
         fig.suptitle(f"Metropolis Monte Carlo\nN = {self.monomers} - T = {self.T:.2f}")
 
-        ax = plt.subplot(321)
+        if plot_polymer:
+            ax = plt.subplot(321)
+        else:
+            ax = plt.subplot(311)
         ax.plot(
             np.convolve(self.MMC_observables.get("E"), np.ones(running_mean_N)/running_mean_N, mode="valid"),
             color="k")
         ax.set_title("Energy")
-        # ax.set_xlabel("MC Step")
         ax.set_ylabel(r"Energy $(k_b)$")
 
         # e2e
-        ax = plt.subplot(323, sharex=ax)
+        if plot_polymer:
+            ax = plt.subplot(323, sharex=ax)
+        else:
+            ax = plt.subplot(312, sharex=ax)
         ax.plot(
             np.convolve(self.MMC_observables.get("e2e"), np.ones(running_mean_N)/running_mean_N, mode="valid"),
             color="k")
         ax.set_title("End-to-end euclidean distance")
-        # ax.set_xlabel("MC Step")
         ax.set_ylabel(r"Distance")
         
         # RoG
-        ax = plt.subplot(325, sharex=ax)
+        if plot_polymer:
+            ax = plt.subplot(325, sharex=ax)
+        else:
+            ax = plt.subplot(313, sharex=ax)
         ax.plot(
             np.convolve(self.MMC_observables.get("RoG"), np.ones(running_mean_N)/running_mean_N, mode="valid"),
             color="k")
@@ -586,23 +604,41 @@ class Polymer:
         ax.set_xlabel("MC Step")
         ax.set_ylabel(r"RoG")
 
-        if self.dims == 2:
-            ax = plt.subplot(122)
-        else:
-            ax = plt.subplot(122, projection="3d")
-        self.plot_polymer(ax=ax, MC_step=len(self.MMC_observables.get("RoG")))
-        
         plt.tight_layout()
+
+        if plot_polymer:
+            if self.dims == 2:
+                ax = plt.subplot(122)
+            else:
+                ax = plt.subplot(122, projection="3d")
+            self.plot_polymer(ax=ax, MC_step=len(self.MMC_observables.get("RoG")))
+        
+        if len(path) > 0:
+            fig.savefig(path)
+
         plt.show()
 
     
-    def MMC_time_to_equilibrium(self, T_low, T_high, N, max_MC_steps=1e5, threshold=1e-1, N_thr=5, N_avg=100):
+    def MMC_time_to_equilibrium(self, T_low, T_high, N, max_MC_steps=1e5, threshold=1e-1, N_thr=5, N_avg=100, phase_ax=None, path=""):
         self.remember_initial()
 
         steps_needed = []
-        temps = np.linspace(T_low, T_high, N)
+        temps = np.linspace(T_low, T_high, N)[::-1]
 
-        for T in tqdm(temps):
+        # Energy
+        fig, axs = plt.subplots(2, 1)
+        axs = axs.ravel()
+        titl = fig.suptitle(f"Metropolis Monte Carlo\nN = {self.monomers}")
+
+        axs[0].set_title("Energy")
+        axs[0].set_ylabel(r"Energy $(k_b)$")        
+        axs[1].set_title("Radius of Gyration")
+        axs[1].set_xlabel("MC Step")
+        axs[1].set_ylabel(r"RoG")
+
+        plt.tight_layout()
+
+        for i, T in tqdm(enumerate(temps)):
             # Set back to initial state
             self.reset_to_initial()
             self.T = T
@@ -613,12 +649,32 @@ class Polymer:
             # Save amount of steps
             steps_needed.append(len(self.MMC_observables.get("E")))
 
-            self.plot_MMC(running_mean_N=10)
+            running_mean_N=steps_needed[-1]//20
 
-        plt.figure()
-        plt.plot(temps, steps_needed)
-        plt.title("MC Steps before equilibration")
-        plt.xlabel(r"Temperature $(k_b)$")
-        plt.ylabel("Steps")
+            # self.plot_MMC(running_mean_N=steps_needed[-1]//100, plot_polymer=False)
+            if i % 2 == 0:
+                # Energy
+                axs[0].plot(
+                    np.convolve(self.MMC_observables.get("E"), np.ones(running_mean_N)/running_mean_N, mode="valid"),
+                    label=f"T={self.T:.2f}")
+                # RoG
+                axs[1].plot(
+                    np.convolve(self.MMC_observables.get("RoG"), np.ones(running_mean_N)/running_mean_N, mode="valid"),
+                    label=f"T={self.T:.2f}")
+        
+        lgd = axs[0].legend(loc='center left', bbox_to_anchor=(1, -0.2))
+        # axs[1].legend(loc='center left', bbox_to_anchor=(1, 0.5))
+        if len(path) > 0:
+            fig.savefig(path + f"t17_EROG_N{self.monomers}.pdf", bbox_extra_artists=(lgd,titl), bbox_inches='tight')
         plt.show()
+
+        if phase_ax is None:
+            plt.figure()
+            plt.plot(temps, steps_needed)
+            plt.title("MC Steps before equilibration")
+            plt.xlabel(r"Temperature")
+            plt.ylabel("Steps")
+            plt.show()
+        else:
+            phase_ax.plot(temps, steps_needed, label=f"N={self.monomers}")
             
