@@ -211,7 +211,7 @@ class Polymer:
             del self.MMC_observables
 
 
-    def plot_polymer(self, MC_step=-1, ax=None, path="", numbers=True):
+    def plot_polymer(self, MC_step=-1, ax=None, path="", numbers=True, lims=True):
         show = False
         if ax is None:
             show = True
@@ -264,8 +264,9 @@ class Polymer:
 
         # Prettify
         ax.grid(True, linestyle='--')
-        ax.set_ylim([self.monomer_pos[:,1].max()+0.5, self.monomer_pos[:,1].min()-0.5])
-        ax.set_xlim([self.monomer_pos[:,0].min()-0.5, self.monomer_pos[:,0].max()+0.5])
+        if lims:
+            ax.set_ylim([self.monomer_pos[:,1].max()+0.5, self.monomer_pos[:,1].min()-0.5])
+            ax.set_xlim([self.monomer_pos[:,0].min()-0.5, self.monomer_pos[:,0].max()+0.5])
         yticks = np.arange(self.monomer_pos[:,1].min(), self.monomer_pos[:,1].max()+1)
         xticks = np.arange(self.monomer_pos[:,0].min(), self.monomer_pos[:,0].max()+1)
         ax.set_yticks(yticks)
@@ -393,22 +394,22 @@ class Polymer:
                 fig.savefig(self.output_path + "task_1/t13_energy_hist.pdf")
 
 
-    def MMC(self, MC_steps=1, use_threshold=True, threshold=1e-2,  N_thr=3, N_avg=100, SA=False):
+    def MMC(self, MC_steps=1, use_threshold=True, threshold=1e-2,  N_thr=3, N_avg=100, SA=False, ret_hist=False):
         if self.NN is None:
             self.find_nearest_neighbours()
         if self.E is None:
             self.calculate_energy()
 
-        MMC_observables, self.NN = self.njit_MMC(
-                                            self.monomers, self.E, self.T, MC_steps,
-                                            self.surrounding_coords, self.surrounding_coords_cross, self.MM_interaction_energy,
-                                            self.monomer_grid, self.monomer_pos, self.monomer_AA_number, self.NN,
-                                            self.njit_find_possible_transitions,
-                                            self.njit_apply_transition,
-                                            self.njit_find_nearest_neighbours,
-                                            self.njit_calculate_energy,
-                                            use_threshold, threshold, N_thr, N_avg,
-                                            SA=SA)
+        MMC_observables, self.NN, polymer_hist = self.njit_MMC(
+            self.monomers, self.E, self.T, MC_steps,
+            self.surrounding_coords, self.surrounding_coords_cross, self.MM_interaction_energy,
+            self.monomer_grid, self.monomer_pos, self.monomer_AA_number, self.NN,
+            self.njit_find_possible_transitions,
+            self.njit_apply_transition,
+            self.njit_find_nearest_neighbours,
+            self.njit_calculate_energy,
+            use_threshold, threshold, N_thr, N_avg,
+            SA=SA, ret_hist=ret_hist)
         
         # Store new observables
         if hasattr(self, "MMC_observables"):
@@ -421,6 +422,9 @@ class Polymer:
         # Update energy. Rest is updated by reference in function
         self.E = self.MMC_observables.get("E")[-1]
 
+        if ret_hist:
+            return polymer_hist
+
     @staticmethod
     @njit()
     def njit_MMC(
@@ -432,7 +436,7 @@ class Polymer:
         njit_find_nearest_neighbours,
         njit_calculate_energy,
         use_threshold, threshold, N_thr, N_avg,
-        SA):
+        SA, ret_hist=False):
         """Metropolis Monte Carlo
         """
 
@@ -443,6 +447,11 @@ class Polymer:
             "e2e": np.zeros(MC_steps),
             "RoG": np.zeros(MC_steps)
         }
+
+        if ret_hist:
+            polymer_hist = np.zeros((MC_steps, monomers, 3), dtype=np.int32)-1
+        else:
+            polymer_hist = np.zeros((1, monomers, 3), dtype=np.int32)-1
 
         # For all steps/sweeps
         running_mean = np.zeros(MC_steps//N_avg)
@@ -480,6 +489,9 @@ class Polymer:
                     E = old_E
                     NN = old_NN
                     njit_apply_transition(monomer_grid, monomer_pos, monomer_idx, -possible_transitions[transition_idx])
+                
+                if ret_hist:
+                    polymer_hist[i] = monomer_pos.copy()
 
             # Save observables
             # Energy
@@ -504,10 +516,7 @@ class Polymer:
             for key, val in MMC_observables.items():
                 MMC_observables[key] = val[:i+1]
 
-        # Return NN as it is not changed by reference
-        # MMC_observables["NN"] = NN
-
-        return MMC_observables, NN
+        return MMC_observables, NN, polymer_hist
 
     @staticmethod
     @njit

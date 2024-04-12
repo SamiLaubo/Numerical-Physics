@@ -9,10 +9,12 @@ from utils import Timer
 from protein import Polymer
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.animation as animation
 
 # Choose tasks to run
 TASK_1 = False
-TASK_2 = True
+TASK_2 = False
+ANIM = True
 
 # Subtasks (only if super is true)
 TASK_1_1 = False
@@ -259,6 +261,48 @@ def Task_2():
 
         timer.end()
 
+def animate():
+    P = Polymer(monomers=25, flexibility=0.3, T=2)
+    P.find_nearest_neighbours()
+    P_start = P.monomer_pos.copy()
+    P.plot_polymer()
+    P_hist = P.MMC(MC_steps=1000, ret_hist=True)
+    P.plot_polymer()
+
+    fig, ax = plt.subplots()
+    P.monomer_pos = P_start
+    P.NN = None
+    lims_0 = [P.monomer_pos[:,0].min()-3, P.monomer_pos[:,0].max()+3]
+    lims_1 = [P.monomer_pos[:,1].min()-3, P.monomer_pos[:,1].max()+3]
+    ax.set_ylim(lims_1)
+    ax.set_xlim(lims_0)
+    P.plot_polymer(ax=ax, numbers=False, lims=False)
+
+    def anim_func(i):
+        ax.clear()
+        P.monomer_pos = P_hist[i]
+        P.plot_polymer(ax=ax, numbers=False, MC_step=i, lims=False)
+        ax.set_ylim(lims_1)
+        ax.set_xlim(lims_0)
+        return ax,
+    
+    anim = animation.FuncAnimation(
+        fig,
+        anim_func,
+        P_hist.shape[0],
+        interval = 1,
+        repeat=False,
+        blit=False
+    )
+
+    path = "output/anim/test1.gif"
+    if os.path.exists(path):
+        os.remove(path)
+    anim.save(path, fps=10)
+    print(f"Animation saved to {path}")
+    plt.close()
+
+
 if __name__ == '__main__':
     # Create dirs
     for i in range(1,3):
@@ -269,7 +313,10 @@ if __name__ == '__main__':
         Task_1()
 
     if TASK_2:
-        Task_2()    
+        Task_2()  
+
+    if ANIM:
+        animate()  
 
 # TODO:
     # Use sparse matrices for grid
