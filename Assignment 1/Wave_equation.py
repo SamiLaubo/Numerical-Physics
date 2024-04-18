@@ -76,7 +76,7 @@ class Wave_Solver:
         return u
     
 
-    def animate(self, u):
+    def animate(self, u, path=""):
 
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
@@ -99,11 +99,11 @@ class Wave_Solver:
             fargs=(u, surface)
         )
 
-        path = "output/wave_equation/explicit_solution_wave.gif"
-        if os.path.exists(path):
-            os.remove(path)
-        anim.save(path, fps=30)
-        plt.close()
+        if len(path) > 0:
+            if os.path.exists(path):
+                os.remove(path)
+            anim.save(path, fps=30)
+            plt.close()
 
 
 if __name__ == '__main__':
