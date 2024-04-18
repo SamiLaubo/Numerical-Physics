@@ -82,7 +82,7 @@ class Advection:
 
         
     
-    def animate(self, u):#, u_anal, u_lex):
+    def animate(self, u, path=""):#, u_anal, u_lex):
         fig, ax = plt.subplots()
         plt.ylim([-0.1, np.max(u)*1.1])
 
@@ -110,11 +110,11 @@ class Advection:
 
         # plt.legend()
 
-        path = "output/hopf/hopf_gaussian.gif"
-        if os.path.exists(path):
-            os.remove(path)
-        anim.save(path, fps=60)
-        plt.close()
+        if len(path) > 0:
+            if os.path.exists(path):
+                os.remove(path)
+            anim.save(path, fps=60)
+            plt.close()
 
 if __name__ == '__main__':
 
