@@ -10,10 +10,25 @@ from Wave_equation import Wave_Solver
 from Diffusion import Diffusion
 from Hopf import Advection
 
+# Plot params
+plt.style.use('seaborn-v0_8-whitegrid')
+fontsize = 12
+plt.rcParams.update({
+    "axes.titlesize": fontsize,
+    "axes.labelsize": fontsize,
+    "ytick.labelsize": fontsize,
+    "xtick.labelsize": fontsize,
+    "legend.fontsize": fontsize,
+    "legend.frameon": True,
+    "mathtext.fontset": "stix",
+    "font.family": "STIXGeneral"
+})
+from IPython.display import set_matplotlib_formats
+set_matplotlib_formats("svg")
 
 # Choose tasks to run
-TASK_2 = False # Diffusion
-TASK_3 = True # Wave equation
+TASK_2 = True # Diffusion
+TASK_3 = False # Wave equation
 TASK_4 = False # Hopf
 
 # Subtasks (only if super is true)
@@ -43,12 +58,11 @@ timer = Timer()
 
 
 def diff_main():
-    D = 1.
-    D_type = "step"
-    a, b = -2.0, 2.0
-    T = 0.01
+    D = 1. # mu m^2 / ms
+    D_type = "constant"
+    a, b = 0.0, 4.0 # mu m
+    T = 0.1 # ms
     Nx = 100
-    # Nt = 1000
     dt = 1.818e-4
 
     # Create Diffusion class
@@ -90,16 +104,42 @@ def diff_main():
         timer.end()
 
     if TASK_2_5 and TASK_2_8 and TASK_2_7:
-        plt.figure()
-        plt.title("Reflective Boundaries")
-        plt.plot(reflective_CN[0], 2*reflective_CN[1], '.', label='Crank-Nicolson')
-        # plt.plot(reflective_AB[0], reflective_AB[1], label="Analytical Solution")
-        plt.plot(analytical_unbounded[0], analytical_unbounded[1], label="Analytical Unbounded Solution")
-        # plt.title('Crank-Nicolson Solution for Diffusion Equation')
-        plt.xlabel('x')
-        plt.ylabel('Concentration')
-        plt.legend()
+        # fig, axs = plt.subplots(1,3, figsize=(20,5))
+
+        # # Reflective boundaries
+        # axs[0].set_title("Reflective Boundaries")
+        # axs[0].plot(reflective_CN[0], reflective_CN[1], 'x', label='Crank-Nicolson')
+        # axs[0].plot(reflective_AB[0], reflective_AB[1], color='k', label="Exact Solution")
+        
+        # # Absorbing boundaries
+        # axs[1].set_title("Absorbing Boundaries")
+        # axs[1].plot(absorbing_CN[0], absorbing_CN[1], 'x', label='Crank-Nicolson')
+        # axs[1].plot(absorbing_AB[0], absorbing_AB[1], color='k', label="Exact Solution")
+
+        # # Unbounded problem
+        # axs[2].set_title("Unbounded")
+        # axs[2].plot(reflective_CN[0], reflective_CN[1], 'x', label="Crank-Nicolson")
+        # axs[2].plot(analytical_unbounded[0], analytical_unbounded[1], color='k', label="Exact Solution")
+
+        # for i, ax in enumerate(axs.ravel()):
+        #     ax.set_xlabel(f'x\n({chr(97+i)})')
+        #     ax.set_ylabel('Concentration')
+        #     ax.legend(loc="lower center")
+        #     ax.grid(False)
+        
+        # plt.show()
+        # fig.savefig(f"output/diffusion/t28_T{T}.pdf")
+
+        fig = plt.figure()
+        plt.plot(reflective_CN[0], reflective_CN[1], 'x', label="Crank-Nicolson")
+        plt.plot(analytical_unbounded[0], analytical_unbounded[1], color='k', label="Exact Solution")
+        plt.xlabel(r"x [$\mu m$]")
+        plt.ylabel(r"u [mass/\mu m^2]")
+        plt.grid(False)
+        plt.legend(loc="lower center")
+        fig.savefig("output/diffusion/t27_unbounded.pdf")
         plt.show()
+
 
 
 def wave_main():
