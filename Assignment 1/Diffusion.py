@@ -6,11 +6,8 @@ import scipy.integrate
 from numba import njit
 import scipy.special
 
-D_POS = 5
-D_NEG = 1
-
 class Diffusion:
-    def __init__(self, D, a, b, T, Nx, dt):
+    def __init__(self, D, a, b, T, Nx, dt, D_type="constant", D_pos=1, D_neg=1):
         self.D = D
         self.a = a
         self.b = b
@@ -19,68 +16,95 @@ class Diffusion:
         self.dt = dt
         self.dx = (b - a) / Nx
         self.u0 = 1.
+        self.D_type = D_type
+        self.D_pos = D_pos
+        self.D_neg = D_neg
+        self.x = np.linspace(self.a, self.b, self.Nx + 1)
 
-    def create_matrices_AB(self, x, D_type="constant", reflective=True):
-
+        # Create discretized diffusivity
         if D_type == "constant":
-            D = np.ones_like(x) * self.D
+            D = np.ones_like(self.x) * self.D
         elif D_type == "step":
-            D_pos = D_POS
-            D_neg = D_NEG
-            D = np.ones_like(x)
-            D[x < 0] = D_neg
-            D[x >= 0] = D_pos
+            D = np.ones_like(self.x)
+            D[self.x < 0] = self.D_neg
+            D[self.x >= 0] = self.D_pos
+        elif D_type == "x2":
+            D = 1 + self.x**2 *10
+        elif D_type == "noncont":
+            D = D_neg + self.x * D_pos
+            D[D<D_neg]= D_neg
+        elif D_type == "sin":
+            D = D + np.sin(self.x*D_neg + D_pos)
+        elif D_type == "stair":
+            D = np.zeros_like(self.x) + D_neg
+            D += np.floor(self.x-self.a+0.5)%2*D_pos
 
-        plt.figure()
-        plt.plot(x, D)
-        plt.title("Diffusivity")
-        plt.show()
-        plt.close()
+        self.D_ = D
 
-        alpha = D * self.dt / self.dx**2
+    def create_matrices_AB(self, reflective=True, plot_diff=False):
+        if plot_diff:
+            plt.figure()
+            plt.plot(self.x, self.D)
+            plt.title("Diffusivity")
+            plt.show()
+            plt.close()
 
-        # Matrix for the tridiagonal system
-        A = np.zeros((self.Nx + 1, self.Nx + 1))
-        np.fill_diagonal(A, 1 + alpha)
-        np.fill_diagonal(A[1:], -alpha/2)
-        np.fill_diagonal(A[:, 1:], -alpha[1:]/2)
-        # np.fill_diagonal(A[1:], -alpha[1:]/2)
-        # np.fill_diagonal(A[:, 1:], -alpha/2)
+        # Constant diffusivity D = c
+        if self.D_type == "constant":
+            alpha = self.D_ * self.dt / self.dx**2
 
-        # print(f'{A[len(A)//2-2:len(A)//2+2] = }')
+            # Matrix for the tridiagonal system
+            A = np.zeros((self.Nx + 1, self.Nx + 1))
+            np.fill_diagonal(A, 1 + alpha)
+            np.fill_diagonal(A[1:], -alpha/2)
+            np.fill_diagonal(A[:, 1:], -alpha[1:]/2)
 
-        B = np.zeros((self.Nx + 1, self.Nx + 1))
-        np.fill_diagonal(B, 1 - alpha)
-        np.fill_diagonal(B[1:], alpha/2)
-        np.fill_diagonal(B[:, 1:], alpha[1:]/2)
-        # np.fill_diagonal(B[1:], alpha[1:]/2)
-        # np.fill_diagonal(B[:, 1:], alpha/2)
+            B = np.zeros((self.Nx + 1, self.Nx + 1))
+            np.fill_diagonal(B, 1 - alpha)
+            np.fill_diagonal(B[1:], alpha/2)
+            np.fill_diagonal(B[:, 1:], alpha[1:]/2)
 
-        # Boundary condition
-        if reflective:
-            A[0, 1] = -alpha[0]
-            A[-1, -2] = -alpha[-1]
-            B[0, 1] = alpha[0]
-            B[-1, -2] = alpha[-1]
+            # Boundary condition
+            if reflective:
+                A[0, 1] = -alpha[0]
+                A[-1, -2] = -alpha[-1]
+                B[0, 1] = alpha[0]
+                B[-1, -2] = alpha[-1]
+
+        # Position dependent diffusivity D(x)
+        else:
+            alpha = self.dt / (2 * self.dx**2)
+
+            D_half_neg = (self.D_[1:] + self.D_[:-1]) / 2
+            D_half_pos = (self.D_[:-1] + self.D_[1:]) / 2
+            D_half_both = (self.D_[:-2] + 2*self.D_[1:-1] + self.D_[2:]) / 2
+
+            A = np.zeros((self.Nx + 1, self.Nx + 1))
+            np.fill_diagonal(A[1:-1,1:-1], 1 + alpha*D_half_both)
+            np.fill_diagonal(A[1:], -alpha*D_half_neg)
+            np.fill_diagonal(A[:, 1:], -alpha*D_half_pos)
+
+            B = np.zeros((self.Nx + 1, self.Nx + 1))
+            np.fill_diagonal(B[1:-1,1:-1], 1 - alpha*D_half_both)
+            np.fill_diagonal(B[1:], alpha*D_half_neg)
+            np.fill_diagonal(B[:, 1:], alpha*D_half_pos)
+
 
         return A, B
 
-    def crank_nicolson_solver(self, D_type="constant", reflective=True):
-        # Grid
-        x = np.linspace(self.a, self.b, self.Nx + 1)
-
+    def crank_nicolson_solver(self, reflective=True):
         # Initial condition (Dirac's delta)
         U = np.zeros(self.Nx + 1)
         U[len(U)//2] = 1.0 / self.dx # Approximation of Dirac's delta
 
-        A, B = self.create_matrices_AB(x, D_type=D_type, reflective=reflective)
+        A, B = self.create_matrices_AB(reflective=reflective)
 
         # Solve over time
         for n in range(int(self.T / self.dt)):
             b = np.dot(B, U)
             U = np.linalg.solve(A, b)
 
-        return x, U, self.dx
+        return self.x, U, self.dx
 
     # 2.6
     def check_mass_conservation(self, x, y):
@@ -95,40 +119,31 @@ class Diffusion:
 
 
     # 2.7
-    def analytical_unbounded(self, D_type="constant"):
-        # Grid
-        x = np.linspace(self.a, self.b, self.Nx + 1)
-
+    def analytical_unbounded(self):
         # Start x
-        x0 = x[(self.Nx+1)//2] # * self.dx
+        x0 = self.x[(self.Nx+1)//2] # * self.dx
 
-        if D_type == "constant":
-            u = self.u0 / (np.sqrt(4*np.pi*self.D*self.T)) * np.exp(- (x - x0)**2 / (4*self.D*self.T))
+        if self.D_type == "constant":
+            u = self.u0 / (np.sqrt(4*np.pi*self.D*self.T)) * np.exp(- (self.x - x0)**2 / (4*self.D*self.T))
 
-        elif D_type == "step":
-            D_pos = D_POS
-            D_neg = D_NEG
-            D = np.ones_like(x)
-            D[x < 0] = D_neg
-            D[x >= 0] = D_pos
-
+        elif self.D_type == "step":
             # A_+(t) (2.10)
-            A_pos_1 = scipy.special.erf(x0/(np.sqrt(4*D_pos*self.T)))
-            A_pos_2 = np.sqrt(D_neg/D_pos) * np.exp((D_pos-D_neg) * x0**2 / (4*D_pos*D_neg*self.T))
-            A_pos_3 = scipy.special.erf(x0/(np.sqrt(4*D_neg*self.T)))
+            A_pos_1 = scipy.special.erf(x0/(np.sqrt(4*self.D_pos*self.T)))
+            A_pos_2 = np.sqrt(self.D_neg/self.D_pos) * np.exp((self.D_pos-self.D_neg) * x0**2 / (4*self.D_pos*self.D_neg*self.T))
+            A_pos_3 = scipy.special.erf(x0/(np.sqrt(4*self.D_neg*self.T)))
             A_pos = 2 / (1 + A_pos_1 + A_pos_2 * (1 - A_pos_3))
 
             # A_-(t) (2.11)
             A_neg = A_pos * A_pos_2
 
-            A = np.ones_like(x)
-            A[x < 0] = A_neg
-            A[x >= 0] = A_pos
+            A = np.ones_like(self.x)
+            A[self.x < 0] = A_neg
+            A[self.x >= 0] = A_pos
 
-            u = self.u0 * A / np.sqrt(4*np.pi*D*self.T) * np.exp(-(x-x0)**2 / (4*D*self.T))
+            u = self.u0 * A / np.sqrt(4*np.pi*self.D_*self.T) * np.exp(-(self.x-x0)**2 / (4*self.D_*self.T))
 
 
-        return x, u, self.dx
+        return self.x, u, self.dx
     
     # 2.8
     def analytical_bounded(self, reflective=True, N=1000):
