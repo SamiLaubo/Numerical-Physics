@@ -8,7 +8,7 @@ from numba import njit
 
 
 class Advection:
-    def __init__(self, a, b, c, Nx, Nt, T, A=1, init_name="gaussian"):
+    def __init__(self, a, b, c, Nx, Nt, T, A=1, init_name="gaussian", exp_0=0.0):
         self.a = a
         self.b = b
         self.c = c
@@ -17,6 +17,7 @@ class Advection:
         self.T = T
         self.A = A
         self.init_name = init_name
+        self.exp_0 = exp_0
 
         self.x, self.dx = np.linspace(a, b, Nx, retstep=True)
         self.t, self.dt = np.linspace(0, T, Nt, retstep=True)
@@ -24,7 +25,7 @@ class Advection:
     def u0(self, x, x0=0):
 
         if self.init_name == "gaussian":
-            return self.A*np.exp(-(x-x0)**2/0.005)
+            return self.exp_0 + self.A*np.exp(-(x-x0)**2/0.005)
         elif self.init_name == "step":
             u0 = np.ones_like(x)
             u0[:len(u0)//2] = 1
@@ -77,10 +78,6 @@ class Advection:
             return u
         
         return loop(u, self.dt, self.dx)
-
-
-
-        
     
     def animate(self, u, path=""):#, u_anal, u_lex):
         fig, ax = plt.subplots()
@@ -115,6 +112,64 @@ class Advection:
                 os.remove(path)
             anim.save(path, fps=60)
             plt.close()
+
+    def plot_evolution_lex_anal(self, u_lex, u_anal, path=""):
+        fig = plt.figure(figsize=(10,2))
+        
+        for i in range(5):
+            if i == 0:
+                plt.plot(self.x, u_anal[len(u_anal)//5*i], color="k", label="Exact")
+                plt.plot(self.x, u_lex[len(u_lex)//5*i], 
+                         'x', color="b", label="Lex-Wendroff", markevery=0.02)
+            else:
+                plt.plot(self.x, u_anal[len(u_anal)//5*i], color="k")
+                plt.plot(self.x, u_lex[len(u_lex)//5*i], 
+                         'x', color="b", markevery=0.02)
+
+            plt.text(self.x[np.argmax(u_anal[len(u_anal)//5*i])], 
+                     np.max(u_anal[len(u_anal)//5*i])+0.02, 
+                     f"t = {self.t[len(u_anal)//5*i]:.0f}s", 
+                     horizontalalignment="center")
+        
+        plt.ylim([0, plt.gca().get_ylim()[1]+0.05])
+        plt.xlim([plt.gca().get_xlim()[0], plt.gca().get_xlim()[1]+0.1])
+        plt.grid(False)
+        plt.legend(loc="upper right")
+        plt.xlabel("x")
+        plt.ylabel("u")
+        plt.show()
+
+        if len(path) > 0:
+            fig.savefig(path)
+
+    def plot_evolution_hopf(self, u, path=""):
+        fig = plt.figure(figsize=(10,2))
+
+        # idxs = np.logspace(0, np.log10(len(u)/2), 6, False, dtype=int)
+        idxs = np.linspace(0, len(u)/7, 5, dtype=int)
+
+        for idx, i in enumerate(idxs):
+            plt.plot(self.x, u[i], color="k")
+
+            if idx == len(idxs)-1:
+                plt.text(self.x[np.argmax(u[i])]+0.02, 
+                        np.max(u[i])+0.02, 
+                        f"t = {self.t[i]:.2f}s", horizontalalignment="center")
+            else:
+                plt.text(self.x[np.argmax(u[i])], 
+                        np.max(u[i])+0.02, 
+                        f"t = {self.t[i]:.2f}s", horizontalalignment="center")
+
+        plt.ylim([0, plt.gca().get_ylim()[1]+0.05])
+        plt.xlim([0, 0.5])
+        plt.grid(False)
+        plt.xlabel("x")
+        plt.ylabel("u")
+        plt.show()
+
+        if len(path) > 0:
+            fig.savefig(path)
+
 
 if __name__ == '__main__':
 

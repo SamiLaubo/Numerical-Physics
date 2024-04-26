@@ -59,9 +59,6 @@ class Wave_Solver:
         
         return solve_u(u, self.beta)
 
-        
-        
-
     def analytical_solution(self):
 
         sin_x = np.sin(np.pi*self.XX)
@@ -74,7 +71,6 @@ class Wave_Solver:
         u = spatial_part * time_part[:,None,None]
 
         return u
-    
 
     def animate(self, u, path=""):
 
@@ -104,6 +100,40 @@ class Wave_Solver:
                 os.remove(path)
             anim.save(path, fps=30)
             plt.close()
+
+    def plot_evolution(self, u, u_anal=None, path=""):
+
+        fig = plt.figure(figsize=(10,5))
+
+        rows = 2 if u_anal is not None else 1
+
+        for i in range(5):
+            ax = fig.add_subplot(rows,5,i+1, projection="3d")
+            ax.plot_surface(self.XX, self.YY, u[len(u)//5*i], cmap="seismic")
+            ax.set_zlim(-1, 1)
+            ax.set_aspect("equal")
+            ax.set_title(f"t = {self.t[len(u)//5*i]:.2f}s")
+            ax.grid(False)
+            ax.set_xticks([]); ax.set_yticks([]); ax.set_zticks([])
+            if i == 2 and u_anal is not None:
+                ax.text2D(0.5, 1.2, "(a)", transform=ax.transAxes, size=12)
+
+            if u_anal is not None:
+                ax = fig.add_subplot(rows,5,i+6, projection="3d")
+                ax.plot_surface(self.XX, self.YY, u_anal[len(u_anal)//5*i], cmap="seismic")
+                ax.set_zlim(-1, 1)
+                ax.set_aspect("equal")
+                ax.set_title(f"t = {self.t[len(u)//5*i]:.2f}s")
+                ax.grid(False)
+                ax.set_xticks([]); ax.set_yticks([]); ax.set_zticks([])
+                if i == 2: 
+                    ax.text2D(0.5, 1.2, "(b)", transform=ax.transAxes, size=12)
+
+
+        # plt.tight_layout()
+        plt.show()
+        if len(path) > 0:
+            fig.savefig(path)
 
 
 if __name__ == '__main__':

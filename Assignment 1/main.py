@@ -27,25 +27,25 @@ from IPython.display import set_matplotlib_formats
 set_matplotlib_formats("svg")
 
 # Choose tasks to run
-TASK_2 = True # Diffusion
+TASK_2 = False # Diffusion
 TASK_3 = False # Wave equation
-TASK_4 = False # Hopf
+TASK_4 = True # Hopf
 
 # Subtasks (only if super is true)
-TASK_2_5 = False
-TASK_2_6 = False
+TASK_2_5 = True
+TASK_2_6 = True
 TASK_2_7 = False
-TASK_2_8 = False
+TASK_2_8 = True
 TASK_2_9 = False
 TASK_2_10_x2 = False
 TASK_2_10_noncont = False
 TASK_2_10_sin = False
 TASK_2_10_stair = False
 
-TASK_3_2 = True
+TASK_3_2 = False
 TASK_3_4 = True
 
-TASK_4_2 = True
+TASK_4_2 = False
 TASK_4_5 = True
 
 
@@ -66,7 +66,7 @@ def diff_main():
     D = 1. # mu m^2 / ms
     D_type = "constant"
     a, b = -2.0, 2.0 # mu m
-    T = 0.1 # ms
+    T = 0.5 # ms
     Nx = 100
     dt = 1.818e-4
 
@@ -96,7 +96,20 @@ def diff_main():
     if TASK_2_7: 
         timer.start("2.7")
         
-        analytical_unbounded = Diff.analytical_unbounded()
+        Diff2 = Diffusion(D, a, b, 0.1, Nx, dt, D_type=D_type)
+        analytical_unbounded = Diff2.analytical_unbounded()
+        reflective_CN = Diff2.crank_nicolson_solver()
+
+        # Unbounded problem
+        fig = plt.figure()
+        plt.plot(reflective_CN[0], reflective_CN[1], 'x', label="Crank-Nicolson")
+        plt.plot(analytical_unbounded[0], analytical_unbounded[1], color='k', label="Exact Solution")
+        plt.xlabel(r"x [$\mu m$]")
+        plt.ylabel(r"u [$mass/\mu m^2$]")
+        plt.grid(False)
+        plt.legend(loc="lower center")
+        fig.savefig("output/diffusion/t27_unbounded.pdf")
+        plt.show()
 
         timer.end()
 
@@ -108,23 +121,28 @@ def diff_main():
 
         timer.end()
 
-    if TASK_2_5 and TASK_2_8 and TASK_2_7:
-        # fig, axs = plt.subplots(1,3, figsize=(20,5))
+    if TASK_2_5 and TASK_2_8:
+        # fig, axs = plt.subplots(1,2, figsize=(5,5))
 
-        # # Reflective boundaries
-        # axs[0].set_title("Reflective Boundaries")
-        # axs[0].plot(reflective_CN[0], reflective_CN[1], 'x', label='Crank-Nicolson')
-        # axs[0].plot(reflective_AB[0], reflective_AB[1], color='k', label="Exact Solution")
+        # Reflective boundaries
+        fig = plt.figure()
+        # plt.set_title("Reflective Boundaries")
+        plt.plot(reflective_CN[0], reflective_CN[1], 'x', label='Crank-Nicolson')
+        plt.plot(reflective_AB[0], reflective_AB[1], color='k', label="Exact Solution")
+        plt.xlabel(r"x [$\mu m$]")
+        plt.ylabel(r"u [$mass/\mu m^2$]")
+        plt.grid(False)
+        fig.savefig("output/diffusion/t28_reflective.pdf")
         
-        # # Absorbing boundaries
-        # axs[1].set_title("Absorbing Boundaries")
-        # axs[1].plot(absorbing_CN[0], absorbing_CN[1], 'x', label='Crank-Nicolson')
-        # axs[1].plot(absorbing_AB[0], absorbing_AB[1], color='k', label="Exact Solution")
-
-        # # Unbounded problem
-        # axs[2].set_title("Unbounded")
-        # axs[2].plot(reflective_CN[0], reflective_CN[1], 'x', label="Crank-Nicolson")
-        # axs[2].plot(analytical_unbounded[0], analytical_unbounded[1], color='k', label="Exact Solution")
+        # Absorbing boundaries
+        fig = plt.figure()
+        # plt.set_title("Absorbing Boundaries")
+        plt.plot(absorbing_CN[0], absorbing_CN[1], 'x', label='Crank-Nicolson')
+        plt.plot(absorbing_AB[0], absorbing_AB[1], color='k', label="Exact Solution")
+        plt.xlabel(r"x [$\mu m$]")
+        plt.ylabel(r"u [$mass/\mu m^2$]")
+        plt.grid(False)
+        fig.savefig("output/diffusion/t28_absorbing.pdf")
 
         # for i, ax in enumerate(axs.ravel()):
         #     ax.set_xlabel(f'x\n({chr(97+i)})')
@@ -132,18 +150,8 @@ def diff_main():
         #     ax.legend(loc="lower center")
         #     ax.grid(False)
         
-        # plt.show()
-        # fig.savefig(f"output/diffusion/t28_T{T}.pdf")
-
-        fig = plt.figure()
-        plt.plot(reflective_CN[0], reflective_CN[1], 'x', label="Crank-Nicolson")
-        plt.plot(analytical_unbounded[0], analytical_unbounded[1], color='k', label="Exact Solution")
-        plt.xlabel(r"x [$\mu m$]")
-        plt.ylabel(r"u [$mass/\mu m^2$]")
-        plt.grid(False)
-        plt.legend(loc="lower center")
-        fig.savefig("output/diffusion/t27_unbounded.pdf")
         plt.show()
+        fig.savefig(f"output/diffusion/t28_T{T}.pdf")
 
     if TASK_2_9:
         timer.start("2.9")
@@ -155,11 +163,11 @@ def diff_main():
         D_type = "step"
         a, b = -2.0, 2.0 # mu m
         T = 0.2 # ms
-        Nx = 100
+        Nx = 200
         dt = 1.818e-4
 
         # Compare with constant diffusion
-        Diff = Diffusion(D, a, b, T, Nx, dt, D_type="constant", D_pos=D, D_neg=D)
+        Diff = Diffusion(D, a, b, 0.1, Nx, dt, D_type="constant", D_pos=D, D_neg=D)
         step_unbounded = Diff.crank_nicolson_solver()
         step_unbounded_analytical = Diff.analytical_unbounded()
         fig = plt.figure()
@@ -167,9 +175,9 @@ def diff_main():
         plt.plot(step_unbounded_analytical[0], step_unbounded_analytical[1], color='k', label="Exact Solution")
         plt.xlabel(r"x [$\mu m$]")
         plt.ylabel(r"u [$mass/\mu m^2$]")
-        plt.grid(False)
+        # plt.grid(False)
         plt.legend(loc="lower center")
-        # fig.savefig("output/diffusion/t27_unbounded.pdf")
+        fig.savefig("output/diffusion/t27_unbounded.pdf")
         plt.show()
 
         # Step diffusion
@@ -181,16 +189,20 @@ def diff_main():
         lns2 = ax.plot(step_unbounded_analytical[0], step_unbounded_analytical[1], color='k', label="Exact Solution")
         ax.set_xlabel(r"x [$\mu m$]")
         ax.set_ylabel(r"u [$mass/\mu m^2$]")
-        ax.grid(False)
+        # ax.grid(False)
 
         ax_D = ax.twinx()
         ax_D.set_ylabel(r"D [$\mu m^2/ms$]")
         lns3 = ax_D.plot(Diff.x, Diff.D_, '--', color='k', label="D(x)")
-        ax_D.grid(False)
+        # ax_D.grid(False)
 
         # Legends
         lns = lns1+lns2+lns3
         ax.legend(lns, [l.get_label() for l in lns], loc="upper left")
+        ax_D.set_ylim([ax_D.get_ylim()[0], ax_D.get_ylim()[1]*6])
+        ax.set_ylim([-ax.get_ylim()[1]*0.25, ax.get_ylim()[1]])
+        ax.set_yticks(ax.get_yticks()[2:-1])
+        ax_D.set_yticks(ax_D.get_yticks()[0:2])
 
         fig.savefig("output/diffusion/t29_step.pdf")
         plt.show()
@@ -360,16 +372,17 @@ def wave_main():
     if TASK_3_2: 
         timer.start("3.2")
 
-        WS = Wave_Solver(a=0, b=1, Nx=100, Nt=200, T=2/np.sqrt(5))
+        WS = Wave_Solver(a=0, b=1, Nx=100, Nt=200, T=1/np.sqrt(5))
 
         t1 = time.time()
         u = WS.explicit_solver(init_cond="normal")
-        # u = WS.analytical_solution()
+        u_anal = WS.analytical_solution()
         t2 = time.time()
         print(f'Solving time: {t2 - t1}')
 
         t1 = time.time()
-        WS.animate(u)
+        # WS.animate(u)
+        WS.plot_evolution(u, u_anal, path="output/wave/t32_wave.pdf")
         t2 = time.time()
         print(f'Animation time: {t2 - t1}')
 
@@ -386,7 +399,8 @@ def wave_main():
         print(f'Solving time: {t2 - t1}')
 
         t1 = time.time()
-        WS.animate(u, path="output/wave/explicit_solution_wave.gif")
+        # WS.animate(u, path="output/wave/explicit_solution_wave.gif")
+        WS.plot_evolution(u, path="output/wave/t35_wave.pdf")
         t2 = time.time()
         print(f'Animation time: {t2 - t1}')
 
@@ -396,18 +410,19 @@ def hopf_main():
     if TASK_4_2: 
         timer.start("4.2")
 
-        A = Advection(a=0, b=1, c=0.01, Nx=500, Nt=1000, T=2, A=0.3, init_name="gaussian")
+        A = Advection(a=-0.2, b=1, c=0.01, Nx=500, Nt=1000, T=100, A=0.3, init_name="gaussian")
 
         t1 = time.time()
-        # u_anal = A.analytical()
-        # u_lex = A.Lex_Wendroff()
-        u = A.Hopf_Lax_Wendroff(x0=0.5)
+        u_anal = A.analytical()
+        u_lex = A.Lex_Wendroff()
+        # u = A.Hopf_Lax_Wendroff(x0=0.5)
         t2 = time.time()
         print(f'Solving time: {t2 - t1}')
 
         t1 = time.time()
         # A.animate(u_anal, u_lex)
-        A.animate(u, path = "output/hopf/hopf_gaussian.gif")
+        # A.animate(u, path = "output/hopf/hopf_gaussian.gif")
+        A.plot_evolution_lex_anal(u_lex, u_anal, path="output/hopf/t42_lex_anal.pdf")
         t2 = time.time()
         print(f'Animation time: {t2 - t1}')
 
@@ -421,13 +436,14 @@ def hopf_main():
         t1 = time.time()
         # u_anal = A.analytical()
         # u_lex = A.Lex_Wendroff()
-        u = A.Hopf_Lax_Wendroff(x0=0.5)
+        u = A.Hopf_Lax_Wendroff(x0=0.2)
         t2 = time.time()
         print(f'Solving time: {t2 - t1}')
 
         t1 = time.time()
         # A.animate(u_anal, u_lex)
-        A.animate(u, path = "output/hopf/hopf_gaussian.gif")
+        # A.animate(u, path = "output/hopf/hopf_gaussian.gif")
+        A.plot_evolution_hopf(u, path="output/hopf/t45_shock.pdf")
         t2 = time.time()
         print(f'Animation time: {t2 - t1}')
 
