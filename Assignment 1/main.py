@@ -36,16 +36,17 @@ TASK_2_5 = True
 TASK_2_6 = True
 TASK_2_7 = False
 TASK_2_8 = True
-TASK_2_9 = False
-TASK_2_10_x2 = False
-TASK_2_10_noncont = False
-TASK_2_10_sin = False
-TASK_2_10_stair = False
+TASK_2_9 = True
+TASK_2_10_x2 = True
+TASK_2_10_noncont = True
+TASK_2_10_sin = True
+TASK_2_10_stair = True
 
 TASK_3_2 = False
-TASK_3_4 = True
+TASK_3_3 = True
+TASK_3_4 = False
 
-TASK_4_2 = False
+TASK_4_2 = True
 TASK_4_5 = True
 
 
@@ -88,7 +89,9 @@ def diff_main():
             reflective_CN = Diff.crank_nicolson_solver(reflective=True)
             absorbing_CN = Diff.crank_nicolson_solver(reflective=False)
 
+        print("Reflective boundaries")
         Diff.check_mass_conservation(reflective_CN[0], reflective_CN[1])
+        print("Absorbing boundaries")
         Diff.check_mass_conservation(absorbing_CN[0], absorbing_CN[1])
 
         timer.end()
@@ -130,7 +133,7 @@ def diff_main():
         plt.plot(reflective_CN[0], reflective_CN[1], 'x', label='Crank-Nicolson')
         plt.plot(reflective_AB[0], reflective_AB[1], color='k', label="Exact Solution")
         plt.xlabel(r"x [$\mu m$]")
-        plt.ylabel(r"u [$mass/\mu m^2$]")
+        plt.ylabel(r"u [$mg/\mu m$]")
         plt.grid(False)
         fig.savefig("output/diffusion/t28_reflective.pdf")
         
@@ -140,7 +143,7 @@ def diff_main():
         plt.plot(absorbing_CN[0], absorbing_CN[1], 'x', label='Crank-Nicolson')
         plt.plot(absorbing_AB[0], absorbing_AB[1], color='k', label="Exact Solution")
         plt.xlabel(r"x [$\mu m$]")
-        plt.ylabel(r"u [$mass/\mu m^2$]")
+        plt.ylabel(r"u [$mg/\mu m$]")
         plt.grid(False)
         fig.savefig("output/diffusion/t28_absorbing.pdf")
 
@@ -174,7 +177,7 @@ def diff_main():
         plt.plot(step_unbounded[0], step_unbounded[1], 'x', label="Crank-Nicolson")
         plt.plot(step_unbounded_analytical[0], step_unbounded_analytical[1], color='k', label="Exact Solution")
         plt.xlabel(r"x [$\mu m$]")
-        plt.ylabel(r"u [$mass/\mu m^2$]")
+        plt.ylabel(r"u [$mg/\mu m$]")
         # plt.grid(False)
         plt.legend(loc="lower center")
         fig.savefig("output/diffusion/t27_unbounded.pdf")
@@ -188,11 +191,11 @@ def diff_main():
         lns1 = ax.plot(step_unbounded[0], step_unbounded[1], 'x', label="Crank-Nicolson")
         lns2 = ax.plot(step_unbounded_analytical[0], step_unbounded_analytical[1], color='k', label="Exact Solution")
         ax.set_xlabel(r"x [$\mu m$]")
-        ax.set_ylabel(r"u [$mass/\mu m^2$]")
+        ax.set_ylabel(r"u [$mg/\mu m$]")
         # ax.grid(False)
 
         ax_D = ax.twinx()
-        ax_D.set_ylabel(r"D [$\mu m^2/ms$]")
+        ax_D.set_ylabel(r"D [$\mu m/ms$]")
         lns3 = ax_D.plot(Diff.x, Diff.D_, '--', color='k', label="D(x)")
         # ax_D.grid(False)
 
@@ -227,11 +230,11 @@ def diff_main():
         fig, ax = plt.subplots()
         lns1 = ax.plot(step_unbounded[0], step_unbounded[1], color="k", label="Crank-Nicolson")
         ax.set_xlabel(r"x [$\mu m$]")
-        ax.set_ylabel(r"u [$mass/\mu m^2$]")
+        ax.set_ylabel(r"u [$mg/\mu m$]")
         # ax.grid(False)
 
         ax_D = ax.twinx()
-        ax_D.set_ylabel(r"D [$\mu m^2/ms$]")
+        ax_D.set_ylabel(r"D [$\mu m/ms$]")
         lns2 = ax_D.plot(Diff.x, Diff.D_, '--', color='k', label="D(x)")
         # ax_D.grid(False)
 
@@ -266,11 +269,11 @@ def diff_main():
         fig, ax = plt.subplots()
         lns1 = ax.plot(step_unbounded[0], step_unbounded[1], color="k", label="Crank-Nicolson")
         ax.set_xlabel(r"x [$\mu m$]")
-        ax.set_ylabel(r"u [$mass/\mu m^2$]")
+        ax.set_ylabel(r"u [$mg/\mu m$]")
         # ax.grid(False)
 
         ax_D = ax.twinx()
-        ax_D.set_ylabel(r"D [$\mu m^2/ms$]")
+        ax_D.set_ylabel(r"D [$\mu m/ms$]")
         lns2 = ax_D.plot(Diff.x, Diff.D_, '--', color='k', label="D(x)")
         # ax_D.grid(False)
 
@@ -305,11 +308,11 @@ def diff_main():
         fig, ax = plt.subplots()
         lns1 = ax.plot(step_unbounded[0], step_unbounded[1], color="k", label="Crank-Nicolson")
         ax.set_xlabel(r"x [$\mu m$]")
-        ax.set_ylabel(r"u [$mass/\mu m^2$]")
+        ax.set_ylabel(r"u [$mg/\mu m$]")
         # ax.grid(False)
 
         ax_D = ax.twinx()
-        ax_D.set_ylabel(r"D [$\mu m^2/ms$]")
+        ax_D.set_ylabel(r"D [$\mu m/ms$]")
         lns2 = ax_D.plot(Diff.x, Diff.D_, '--', color='k', label="D(x)")
         # ax_D.grid(False)
 
@@ -345,11 +348,11 @@ def diff_main():
         fig, ax = plt.subplots()
         lns1 = ax.plot(step_unbounded[0], step_unbounded[1], color="k", label="Crank-Nicolson")
         ax.set_xlabel(r"x [$\mu m$]")
-        ax.set_ylabel(r"u [$mass/\mu m^2$]")
+        ax.set_ylabel(r"u [$mg/\mu m$]")
         # ax.grid(False)
 
         ax_D = ax.twinx()
-        ax_D.set_ylabel(r"D [$\mu m^2/ms$]")
+        ax_D.set_ylabel(r"D [$\mu m/ms$]")
         lns2 = ax_D.plot(Diff.x, Diff.D_, '--', color='k', label="D(x)")
         # ax_D.grid(False)
 
@@ -387,6 +390,30 @@ def wave_main():
         print(f'Animation time: {t2 - t1}')
 
         timer.end()
+    
+    if TASK_3_3:
+        timer.start("3.3")
+
+        u_list = []
+        ls = []
+        for nt in [20, 50, 55, 60, 62, 63, 64, 65, 70, 100]:
+            WS = Wave_Solver(a=0, b=1, Nx=100, Nt=nt, T=1/np.sqrt(5))
+            u_list.append(WS.explicit_solver(init_cond="normal")[-1])
+            ls.append(WS.h/WS.dt)
+
+        fig = plt.figure(figsize=(10,25))
+        for i, u in enumerate(u_list):
+            ax = fig.add_subplot(5,2,i+1, projection="3d")
+            ax.plot_surface(WS.XX, WS.YY, u, cmap="seismic")
+            ax.set_zlim(-1, 1)
+            ax.set_aspect("equal")
+            ax.set_title(r"$\frac{h}{\Delta t}$ = " + f"{ls[i]:.2f}" + f" - " + r"$\frac{c}{\sqrt{2}}$ = " + f"{1/np.sqrt(2):.2f}", fontsize=20)
+            ax.grid(False)
+            ax.set_xticks([]); ax.set_yticks([]); ax.set_zticks([])
+        fig.savefig("output/wave/t33_stability.pdf")
+
+        timer.end()
+
 
     if TASK_3_4: 
         timer.start("3.4")

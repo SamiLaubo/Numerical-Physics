@@ -16,7 +16,7 @@ class Wave_Solver:
         self.Nx = Nx
         self.Nt = Nt
         self.t, self.dt = np.linspace(0, T, Nt, retstep=True)
-        xy_values, self.h = np.linspace(0, 1, self.Nx, retstep=True)
+        xy_values, self.h = np.linspace(a, b, self.Nx, retstep=True)
         self.XX, self.YY = np.meshgrid(xy_values, xy_values)
         self.beta = self.c**2 * self.dt**2 / self.h**2
 

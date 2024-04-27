@@ -113,9 +113,9 @@ class Diffusion:
 
         integrated_mass = scipy.integrate.simpson(y, x, self.dx)
 
-        print(f"Original mass: {original_mass}")
-        print(f"Integrated mass: {integrated_mass}")
-        print(f'Difference: {abs(original_mass - integrated_mass):e}')
+        print(f"Original mass: {original_mass} mg")
+        print(f"Integrated mass: {integrated_mass} mg")
+        print(f'Difference: {abs(original_mass - integrated_mass):e} mg')
 
 
     # 2.7
