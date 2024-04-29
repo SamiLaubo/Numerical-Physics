@@ -14,14 +14,16 @@ import matplotlib.animation as animation
 import neuron_network as nw
 
 # Choose tasks to run
-TASK_2 = True
+TASK_2 = False
+TASK_3 = True
 
 # Subtasks (only if super is true)
-TASK_22_a = False
-TASK_22_b = False
-TASK_22_c = False
+TASK_22_a = True
+TASK_22_b = True
+TASK_22_c = True
 TASK_22_d = True
 TASK_22_e = True
+TASK_22_f = True
 
 
 # Timer class
@@ -69,14 +71,13 @@ def Task_2():
         T = nw.create_T(N_nodes=21, N_neighbours=2)
         nw.eigvals(T)
 
-
         timer.end()
 
     if TASK_22_d: 
         timer.start("2.2d")
 
         # Figure
-        fig, axs = plt.subplots(2, 2, sharex=True)
+        fig, axs = plt.subplots(2, 4, sharex=True, figsize=(25,5))
         axs = axs.ravel()
 
         # Transformation matrix
@@ -84,19 +85,76 @@ def Task_2():
 
         # Gaussian initial wave
         V_gauss = nw.create_V(N=21, type="Gaussian")
-        V = nw.evolve_VT(V_gauss, T, N=100, plot_idx=[99], axs=[axs[0], axs[2]], titles=["Gaussian", "(a)"])#, path="output/task_2/d_gaussian_evolution.pdf")
+        V_gauss = nw.evolve_VT(V_gauss, T, N=100, plot_idx=[99], axs=[axs[0], axs[4]], titles=["Gaussian", "(a)"])
 
         # Random initial wave
-        V_gauss = nw.create_V(N=21, type="random")
-        V = nw.evolve_VT(V_gauss, T, N=100, plot_idx=[99], axs=[axs[1], axs[3]], titles=["Random", "(b)"])#, path="output/task_2/d_random_evolution.pdf")
+        V_random = nw.create_V(N=21, type="random")
+        V_random = nw.evolve_VT(V_random, T, N=100, plot_idx=[99], axs=[axs[1], axs[5]], titles=["Random", "(b)"])
+
+        # Random initial wave
+        V_random2 = nw.create_V(N=21, type="random")
+        V_random2 = nw.evolve_VT(V_random2, T, N=100, plot_idx=[99], axs=[axs[2], axs[6]], titles=["Random", "(c)"])
+        
+        # Random initial wave
+        V_random3 = nw.create_V(N=21, type="random")
+        V_random3 = nw.evolve_VT(V_random3, T, N=100, plot_idx=[99], axs=[axs[3], axs[7]], titles=["Random", "(d)"])
         
         # Plot
         plt.figure(fig)
         plt.tight_layout()
         plt.show()
 
+        fig.savefig("output/task_2/d_evolutions_100steps.pdf")
+
+        # Investigate values
+        print(f'{V_gauss[-1] = }')
+        print(f'{V_random[-1] = }')
+        print(f'{V_random2[-1] = }')
+        print(f'{V_random3[-1] = }')
+
+        eigvals, eigvecs = nw.eigvals(T, verbal=False)
+    
+        print(f'{eigvals = }')
+        print(f'{eigvecs[:,-1] = }')
+
 
         timer.end()
+
+    if TASK_22_e: 
+        timer.start("2.2e")
+
+        T_11 = nw.create_T(N_nodes=11, N_neighbours=2)
+        T_10 = nw.create_T(N_nodes=10, N_neighbours=2)
+        T = nw.join_networks(T_11, T_10, plot=True, path="output/task_2/e_T.pdf")
+
+        nw.eigvals(T)
+
+        # np linalg faster because of small matrix - Lanczov will scale better 
+
+        timer.end()
+
+    if TASK_22_f: 
+        timer.start("2.2f")
+
+        # Create transformation matrix
+        T_11 = nw.create_T(N_nodes=11, N_neighbours=2)
+        T_10 = nw.create_T(N_nodes=10, N_neighbours=2)
+        T = nw.join_networks(T_11, T_10)
+
+        # Create initial state
+        V = nw.create_V(21, type="inv_step", normalize=True)
+        
+        # Evolve
+        V = nw.evolve_VT(V, T, N=5, plot_idx=[0,4], path="output/task_2/f_evolution.pdf")
+
+        timer.end()
+
+# Tasks for PDE model
+def Task_3():
+    timer = Timer()
+
+    if TASK_22_a: 
+        timer.start("2.2a")
 
 if __name__ == '__main__':
     # Create dirs
