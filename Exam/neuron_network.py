@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sn
-from scipy.sparse.linalg import eigsh
+import scipy
 import time
 
 # Plot params
@@ -82,7 +82,7 @@ def create_V(N, type="random", normalize=True):
     return V
 
 # 2.2.b
-def evolve_VT(V, T, N=1, method="np.dot", plot_idx=None, path="", axs=None, titles=None):
+def evolve_VT(V, T, N=1, forward=True, method="np.linalg.solve", plot_idx=None, path="", axs=None, titles=None, use_lim=True):
     """Evolve network
 
     Args:
@@ -94,6 +94,10 @@ def evolve_VT(V, T, N=1, method="np.dot", plot_idx=None, path="", axs=None, titl
         axs (list): plt.Axes to do plots on. If None create new axis
     """
 
+    solver_time = []
+    if method == "scipy.sparse.linalg.spsolve":
+        T = scipy.sparse.csc_matrix(T)
+
     if plot_idx is not None:
         if axs is None:
             fig, axs = plt.subplots(len(plot_idx)+1, 1, sharex=True, figsize=(5,10))
@@ -102,6 +106,8 @@ def evolve_VT(V, T, N=1, method="np.dot", plot_idx=None, path="", axs=None, titl
         axs[0].plot(V, "-o", color="k")
         if titles is not None:
             axs[0].set_title(f"{titles[0]} initial state")
+        elif forward == False:
+            axs[0].set_title(f"Initial state - {method}")
         else:
             axs[0].set_title("Initial state")
         axs[0].grid(False)
@@ -112,19 +118,36 @@ def evolve_VT(V, T, N=1, method="np.dot", plot_idx=None, path="", axs=None, titl
 
     for i in range(N):
         # One step
-        if method == "np.dot":
+        if forward:
             V = T@V
-        elif method == "np.linalg.solve":
-            V = np.linalg.solve(T)
+        else: # Backward
+            if method == "np.linalg.solve":
+                t1 = time.time()
+                V = np.linalg.solve(T, V)
+                t2 = time.time()
+            elif method == "scipy.linalg.solve":
+                t1 = time.time()
+                V = scipy.linalg.solve(T, V, assume_a="sym")
+                t2 = time.time()
+            elif method == "scipy.sparse.linalg.spsolve":
+                t1 = time.time()
+                V = scipy.sparse.linalg.spsolve(T, V)
+                t2 = time.time()
+            solver_time.append(t2-t1)
 
         if plot_idx is not None:
             if i in plot_idx:
                 # Plot state as line
                 axs[axs_idx].plot(V, "-o", color="k")
 
-                axs[axs_idx].set_title(f"Step {i+1}")
+                if forward:
+                    axs[axs_idx].set_title(f"t = {i+1}dt")
+                else:
+                    axs[axs_idx].set_title(f"t = -{i+1}dt")
+
                 axs[axs_idx].grid(False)
-                axs[axs_idx].set_ylim([-0.04,0.4])
+                if use_lim:
+                    axs[axs_idx].set_ylim([-0.04,0.4])
                 axs[axs_idx].set_ylabel(r"Charge [$Q$]")
 
                 if axs_idx == len(plot_idx):
@@ -132,7 +155,6 @@ def evolve_VT(V, T, N=1, method="np.dot", plot_idx=None, path="", axs=None, titl
                         axs[axs_idx].set_xlabel(f"Node index\n{titles[1]}")
                     else:
                         axs[axs_idx].set_xlabel("Node index")
-
 
                 axs_idx += 1
 
@@ -142,6 +164,9 @@ def evolve_VT(V, T, N=1, method="np.dot", plot_idx=None, path="", axs=None, titl
 
         if len(path) > 0:
             fig.savefig(path)
+
+    if forward == False:
+        print(f'Time for solver {method}: {solver_time}\nAvg.: {np.mean(solver_time)}')
 
     return V
 
@@ -171,8 +196,8 @@ def eigvals(T, verbal=True):
     # Calculates biggest and smallest in magnitude so need to check multiple
     # because of negative eigenvalues
     t1 = time.time()
-    eig_val_max, eig_vec_max = eigsh(T, which="LM", k=3)
-    eig_val_min, eig_vec_min = eigsh(T, which="SM", k=3)
+    eig_val_max, eig_vec_max = scipy.sparse.linalg.eigsh(T, which="LM", k=3)
+    eig_val_min, eig_vec_min = scipy.sparse.linalg.eigsh(T, which="SM", k=3)
     t2 = time.time()
     print(f'Lanczov time: {t2 - t1}')
 

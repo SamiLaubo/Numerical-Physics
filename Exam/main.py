@@ -12,18 +12,21 @@ import matplotlib.animation as animation
 
 # Code with tasks
 import neuron_network as nw
+from neuron_electrical import Neuron
 
 # Choose tasks to run
 TASK_2 = False
 TASK_3 = True
 
 # Subtasks (only if super is true)
-TASK_22_a = True
-TASK_22_b = True
-TASK_22_c = True
-TASK_22_d = True
-TASK_22_e = True
-TASK_22_f = True
+TASK_22_a = False
+TASK_22_b = False
+TASK_22_c = False
+TASK_22_d = False
+TASK_22_e = False
+TASK_22_f = False
+
+TASK_35_a = True
 
 
 # Timer class
@@ -136,16 +139,28 @@ def Task_2():
     if TASK_22_f: 
         timer.start("2.2f")
 
-        # Create transformation matrix
-        T_11 = nw.create_T(N_nodes=11, N_neighbours=2)
-        T_10 = nw.create_T(N_nodes=10, N_neighbours=2)
-        T = nw.join_networks(T_11, T_10)
+        # Figure
+        fig, axs = plt.subplots(3, 3, sharex=True, figsize=(25,5))
+        axs = axs.ravel()
 
-        # Create initial state
-        V = nw.create_V(21, type="inv_step", normalize=True)
-        
-        # Evolve
-        V = nw.evolve_VT(V, T, N=5, plot_idx=[0,4], path="output/task_2/f_evolution.pdf")
+        # Create transformation matrix
+        T = nw.create_T(N_nodes=21, N_neighbours=2)
+
+        # Solver to test
+        solvers = ["np.linalg.solve", "scipy.linalg.solve", "scipy.sparse.linalg.spsolve"]
+
+        for i, solver in enumerate(solvers):
+            # Create initial state
+            V = nw.create_V(21, type="inv_step", normalize=True)
+            # Evolve
+            V = nw.evolve_VT(V, T, forward=False, N=5, plot_idx=[0,4], method=solver, axs=[axs[i], axs[i+3], axs[i+6]], use_lim=False)
+
+        # Plot
+        plt.figure(fig)
+        plt.tight_layout()
+        plt.show()
+
+        fig.savefig("output/task_2/f_compare_solvers.pdf")
 
         timer.end()
 
@@ -153,8 +168,22 @@ def Task_2():
 def Task_3():
     timer = Timer()
 
-    if TASK_22_a: 
-        timer.start("2.2a")
+    # Parameters
+    a = 0.0 # [m]
+    b = 40.0 # [m]
+    x0 = (b-a)/2
+    Nx = 1000
+    Nt = 10
+    T = 20
+
+    if TASK_35_a: 
+        timer.start("3.5a")
+
+        neuron = Neuron(a, b, x0, Nx, T, Nt)
+        V_analytical = neuron.cable_analytical()
+        neuron.plot_evolution(V_analytical, path="output/task_3/t35_b.pdf")
+
+        timer.end()
 
 if __name__ == '__main__':
     # Create dirs
@@ -164,3 +193,7 @@ if __name__ == '__main__':
 
     if TASK_2:
         Task_2()
+
+    if TASK_3:
+        Task_3()
+
