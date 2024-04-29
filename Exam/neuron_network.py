@@ -4,22 +4,6 @@ import seaborn as sn
 import scipy
 import time
 
-# Plot params
-plt.style.use('seaborn-v0_8-whitegrid')
-fontsize = 12
-plt.rcParams.update({
-    "axes.titlesize": fontsize,
-    "axes.labelsize": fontsize,
-    "ytick.labelsize": fontsize,
-    "xtick.labelsize": fontsize,
-    "legend.fontsize": fontsize,
-    "legend.frameon": True,
-    "mathtext.fontset": "stix",
-    "font.family": "STIXGeneral"
-})
-from IPython.display import set_matplotlib_formats
-set_matplotlib_formats("svg")
-
 # 2.2.a
 def create_T(N_nodes, N_neighbours, plot=False, path=""):
     """Create transformation matrix for N_nodes nodes with N_neighbours closest neighbours in each direction.

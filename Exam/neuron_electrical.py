@@ -12,75 +12,66 @@ class Neuron:
         self.T = T
         self.Nx = Nx
         self.Nt = Nt
+        self.lmbda = lmbda
+        self.tau = tau
         self.x, self.dx = np.linspace(a, b, Nx + 1, retstep=True)
         self.t, self.dt = np.linspace(0, T, Nt + 1, retstep=True)
-
         self.x_x0_2 = (self.x - x0)**2
 
-    def create_matrices_AB(self, reflective=True, plot_diff=False):
-        if plot_diff:
-            plt.figure()
-            plt.plot(self.x, self.D)
-            plt.title("Diffusivity")
-            plt.show()
-            plt.close()
+        print(f'alpha = {lmbda**2*self.dt / (self.dx**2 * tau)}')
 
-        # Constant diffusivity D = c
-        if self.D_type == "constant":
-            alpha = self.D_ * self.dt / self.dx**2
+    def create_matrices_AB(self, scheme="Crank-Nicolson"):
+        # Coefficients
+        alpha = self.lmbda**2 * self.dt / (self.dx**2 * self.tau)
+        beta = self.dt / self.tau
 
-            # Matrix for the tridiagonal system
-            A = np.zeros((self.Nx + 1, self.Nx + 1))
+        # Matrix for the tridiagonal system
+        A = np.zeros((self.Nx + 1, self.Nx + 1))
+        B = np.zeros((self.Nx + 1, self.Nx + 1))
+
+        if scheme.lower() == "explicit euler":
+            np.fill_diagonal(A, 1)
+
+            np.fill_diagonal(B, 1 - 2*alpha - beta)
+            np.fill_diagonal(B[1:], alpha)
+            np.fill_diagonal(B[:, 1:], alpha)
+
+        if scheme.lower() == "implicit euler":
+            np.fill_diagonal(A, 1 + 2*alpha)
+            np.fill_diagonal(A[1:], -alpha)
+            np.fill_diagonal(A[:, 1:], -alpha)
+
+            np.fill_diagonal(B, 1 - beta)
+
+        if scheme.lower() == "crank-nicolson":
             np.fill_diagonal(A, 1 + alpha)
             np.fill_diagonal(A[1:], -alpha/2)
-            np.fill_diagonal(A[:, 1:], -alpha[1:]/2)
+            np.fill_diagonal(A[:, 1:], -alpha/2)
 
-            B = np.zeros((self.Nx + 1, self.Nx + 1))
-            np.fill_diagonal(B, 1 - alpha)
+            np.fill_diagonal(B, 1 - alpha - beta)
             np.fill_diagonal(B[1:], alpha/2)
-            np.fill_diagonal(B[:, 1:], alpha[1:]/2)
-
-            # Boundary condition
-            if reflective:
-                A[0, 1] = -alpha[0]
-                A[-1, -2] = -alpha[-1]
-                B[0, 1] = alpha[0]
-                B[-1, -2] = alpha[-1]
-
-        # Position dependent diffusivity D(x)
-        else:
-            alpha = self.dt / (2 * self.dx**2)
-
-            D_half_neg = (self.D_[1:] + self.D_[:-1]) / 2
-            D_half_pos = (self.D_[:-1] + self.D_[1:]) / 2
-            D_half_both = (self.D_[:-2] + 2*self.D_[1:-1] + self.D_[2:]) / 2
-
-            A = np.zeros((self.Nx + 1, self.Nx + 1))
-            np.fill_diagonal(A[1:-1,1:-1], 1 + alpha*D_half_both)
-            np.fill_diagonal(A[1:], -alpha*D_half_neg)
-            np.fill_diagonal(A[:, 1:], -alpha*D_half_pos)
-
-            B = np.zeros((self.Nx + 1, self.Nx + 1))
-            np.fill_diagonal(B[1:-1,1:-1], 1 - alpha*D_half_both)
-            np.fill_diagonal(B[1:], alpha*D_half_neg)
-            np.fill_diagonal(B[:, 1:], alpha*D_half_pos)
-
+            np.fill_diagonal(B[:, 1:], alpha/2)
 
         return A, B
 
-    def crank_nicolson_solver(self, reflective=True):
-        # Initial condition (Dirac's delta)
-        U = np.zeros(self.Nx + 1)
-        U[len(U)//2] = 1.0 / self.dx # Approximation of Dirac's delta
+    def evolve_scheme(self, scheme="Crank-Nicolson"):
+        
+        # Matrix to store V for each timestep
+        V = np.zeros((self.Nt+1, self.Nx+1))
 
-        A, B = self.create_matrices_AB(reflective=reflective)
+        # Initial potential
+        V[0] = np.exp(-self.x_x0_2)
+        V[0] = V[0] / np.sum(V[0])
+
+        # Create matrices
+        A, B = self.create_matrices_AB(scheme=scheme)
 
         # Solve over time
-        for n in range(int(self.T / self.dt)):
-            b = np.dot(B, U)
-            U = np.linalg.solve(A, b)
+        for i in range(1, self.Nt+1):
+            b = np.dot(B, V[i-1])
+            V[i] = np.linalg.solve(A, b)
 
-        return self.x, U, self.dx
+        return V[1:]
 
     # 3.5.b
     def cable_analytical(self):
@@ -89,37 +80,45 @@ class Neuron:
         # Start from t = dt since t=0 -> divide by zero
         V = np.zeros((self.Nt, self.Nx+1))
         for idx, t in enumerate(self.t[1:]):
-            V[idx] = 1. / np.sqrt(4*np.pi*t) * np.exp(-(self.x_x0_2)/(4*t) - t)
+            V[idx] = 1. / np.sqrt(4*np.pi*t) * np.exp(-self.x_x0_2/(4*t) - t)
 
         # Normalize
-        V = (V.T / np.sum(V, axis=1)).T
+        # V = (V.T / np.sum(V, axis=1)).T
+        V = V / np.sum(V[0])
 
         return V
     
-    def plot_evolution(self, V, path=""):
-        fig = plt.figure(figsize=(8,5))
+    def plot_evolution(self, V, path="", ax=None, plot_times=None):
+        if ax is None:
+            fig, ax = plt.subplots(figsize=(8,5))
 
-        idxs = np.linspace(0, len(V)-1, 4, dtype=int)
+        if plot_times is not None:
+            idxs = np.linspace(0, len(V)-1, 4, dtype=int)
+        else:
+            idxs = []
+            for t in plot_times:
+                idxs.append((self.t - t).argmin())
 
         for i in idxs:
-            plt.plot(self.x, V[i], color="k")
+            # Plot V
+            ax.plot(self.x, V[i], color="k")
 
-            if i == len(V) - 1:
-                plt.text(self.x[np.argmax(V[i])], 
-                        np.max(V[i])-0.0004, 
-                        f"t = {self.t[i+1]:.0f}s", horizontalalignment="center",
-                        fontsize=12)
-            else:
-                plt.text(self.x[np.argmax(V[i])], 
-                        np.max(V[i])+0.0002, 
-                        f"t = {self.t[i+1]:.0f}s", horizontalalignment="center",
-                        fontsize=12)
+            # "Legend"
+            x_max = self.x[np.argmax(V[i])]
+            y_max = np.max(V[i])
 
-        plt.ylim([plt.gca().get_ylim()[0], plt.gca().get_ylim()[1]+0.0005])
-        plt.grid(False)
-        plt.xlabel(r"x [$m$]")
-        plt.ylabel(r"V [V]")
-        plt.show()
+            ax.plot([x_max, x_max+5], [y_max]*2, "--", color="k", linewidth=0.7)
+            ax.text(x_max + 5,
+                    y_max, 
+                    f"t = {self.t[i+1]:.2f}s", 
+                    horizontalalignment="left",
+                    verticalalignment="center")
+
+        ax.set_ylim([ax.get_ylim()[0], ax.get_ylim()[1]+0.0005])
+        ax.grid(False)
+        ax.set_xlabel(r"x [$m$]")
+        ax.set_ylabel(r"V [V]")
 
         if len(path) > 0:
             fig.savefig(path)
+            plt.show()

@@ -26,7 +26,7 @@ TASK_22_d = False
 TASK_22_e = False
 TASK_22_f = False
 
-TASK_35_a = True
+TASK_35_c = True
 
 
 # Timer class
@@ -40,6 +40,29 @@ class Timer:
     def end(self):
         self.t2 = time.time()
         print(f'Task {self.task} time: {self.t2 - self.t1:.4e}s')
+
+# Plotting setup
+# Plot params
+plt.style.use('seaborn-v0_8-whitegrid')
+fontsize = 12
+plt.rcParams.update({
+    "font.size": fontsize,
+    # "axes.titlesize": fontsize,
+    # "axes.labelsize": fontsize,
+    # "ytick.labelsize": fontsize,
+    # "xtick.labelsize": fontsize,
+    # "legend.fontsize": fontsize,
+    "legend.frameon": True,
+    "mathtext.fontset": "stix",
+    "font.family": "STIXGeneral"
+})
+from matplotlib import rc
+rc('text', usetex=True)
+# from IPython.display import set_matplotlib_formats
+# set_matplotlib_formats("svg")
+%matplotlib inline
+import matplotlib_inline
+matplotlib_inline.backend_inline.set_matplotlib_formats('svg')
 
 # Tasks for network model
 def Task_2():
@@ -170,20 +193,50 @@ def Task_3():
 
     # Parameters
     a = 0.0 # [m]
-    b = 40.0 # [m]
+    b = 20.0 # [m]
     x0 = (b-a)/2
-    Nx = 1000
-    Nt = 10
-    T = 20
+    Nx = 300
+    Nt = 400
+    T = 2.0
+        
+    if TASK_35_c: 
+        timer.start("3.5c")
 
-    if TASK_35_a: 
-        timer.start("3.5a")
-
+        # Analytical with own values
+        neuron_analytical = Neuron(a, b, x0, Nx, T, Nt)
+        V_analytical = neuron_analytical.cable_analytical()
+        
+        # Schemes
         neuron = Neuron(a, b, x0, Nx, T, Nt)
-        V_analytical = neuron.cable_analytical()
-        neuron.plot_evolution(V_analytical, path="output/task_3/t35_b.pdf")
+        V_explicit = neuron.evolve_scheme(scheme="explicit euler")
+        V_implicit = neuron.evolve_scheme(scheme="implicit euler")
+        V_crank = neuron.evolve_scheme(scheme="crank-nicolson")
+        
+        fig, axs = plt.subplots(1, 4, figsize=(20,5))
+        axs = axs.ravel()
+        neuron_analytical.plot_evolution(V_analytical, ax=axs[0])
+        neuron.plot_evolution(V_explicit, ax=axs[1], plot_times=neuron_analytical.t[1:])
+        neuron.plot_evolution(V_implicit, ax=axs[2], plot_times=neuron_analytical.t[1:])
+        neuron.plot_evolution(V_crank, ax=axs[3], plot_times=neuron_analytical.t[1:])
+
+        axs[0].set_title("Analytical")
+        axs[1].set_title("Implicit Euler")
+        axs[2].set_title("Explicit Euler")
+        axs[3].set_title("Crank-Nicolson")
+
+        axs[0].set_xlabel(r"x [$m$]" + "\n" + r"$\textbf{(a)}$")
+        axs[1].set_xlabel(r"x [$m$]" + "\n" + r"$\textbf{(b)}$")
+        axs[2].set_xlabel(r"x [$m$]" + "\n" + r"$\textbf{(c)}$")
+        axs[3].set_xlabel(r"x [$m$]" + "\n" + r"$\textbf{(d)}$")
+
+        plt.tight_layout()
+        plt.figure(fig)
+        fig.savefig("output/task_2/t35c_schemes_compare.pdf")
+        plt.show()
 
         timer.end()
+
+
 
 if __name__ == '__main__':
     # Create dirs
