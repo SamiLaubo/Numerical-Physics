@@ -78,7 +78,7 @@ def evolve_VT(V, T, N=1, forward=True, method="np.linalg.solve", plot_idx=None, 
         axs (list): plt.Axes to do plots on. If None create new axis
     """
 
-    solver_time = []
+    solver_time = 0.0
     if method == "scipy.sparse.linalg.spsolve":
         T = scipy.sparse.csc_matrix(T)
 
@@ -106,18 +106,18 @@ def evolve_VT(V, T, N=1, forward=True, method="np.linalg.solve", plot_idx=None, 
             V = T@V
         else: # Backward
             if method == "np.linalg.solve":
-                t1 = time.time()
+                t1 = time.perf_counter_ns()
                 V = np.linalg.solve(T, V)
-                t2 = time.time()
+                t2 = time.perf_counter_ns()
             elif method == "scipy.linalg.solve":
-                t1 = time.time()
+                t1 = time.perf_counter_ns()
                 V = scipy.linalg.solve(T, V, assume_a="sym")
-                t2 = time.time()
+                t2 = time.perf_counter_ns()
             elif method == "scipy.sparse.linalg.spsolve":
-                t1 = time.time()
+                t1 = time.perf_counter_ns()
                 V = scipy.sparse.linalg.spsolve(T, V)
-                t2 = time.time()
-            solver_time.append(t2-t1)
+                t2 = time.perf_counter_ns()
+            solver_time += t2-t1
 
         if plot_idx is not None:
             if i in plot_idx:
@@ -150,7 +150,7 @@ def evolve_VT(V, T, N=1, forward=True, method="np.linalg.solve", plot_idx=None, 
             fig.savefig(path)
 
     if forward == False:
-        print(f'Time for solver {method}: {solver_time}\nAvg.: {np.mean(solver_time)}')
+        print(f'Time for solver {method} per run: {solver_time/N*1e-6:.5f} ms')
 
     return V
 
@@ -165,7 +165,7 @@ def angle(vec1, vec2):
 
     # Unit vectors
     vec1_unit = vec1 / np.linalg.norm(vec1)
-    vec2_unit = vec1 / np.linalg.norm(vec1)
+    vec2_unit = vec2 / np.linalg.norm(vec2)
     return np.arccos(np.clip(vec1_unit @ vec2_unit, -1.0, 1.0)) # Bc. of numerical inaccuracies in this case
 
 # 2.2.c
