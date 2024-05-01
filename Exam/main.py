@@ -14,24 +14,25 @@ import neuron_network as nw
 from neuron_electrical import Neuron
 
 # Choose tasks to run
-TASK_2 = True
-TASK_3 = False
+TASK_2 = False
+TASK_3 = True
 
 # Subtasks (only if super is true)
-TASK_22_a = False
-TASK_22_b = False
-TASK_22_c = False
-TASK_22_d = False
+TASK_22_a = True
+TASK_22_b = True
+TASK_22_c = True
+TASK_22_d = True
 TASK_22_e = True
-TASK_22_f = False
+TASK_22_f = True
 
-TASK_35_c = True
-TASK_35_d = True
-TASK_35_e = True
+TASK_35_c = False
+TASK_35_d = False
+TASK_35_e = False
 
-TASK_37_a = True
-TASK_37_b = True
-TASK_37_d = True
+TASK_37_a = False
+TASK_37_b = False
+TASK_37_d = False
+TASK_37_e = True
 
 
 # Timer class
@@ -431,7 +432,6 @@ def Task_3():
         
         V_crank = neuron.evolve_scheme(scheme="crank-nicolson", extra_eq=True)
 
-
         # Plotting
         fig, axs = plt.subplots(1, 7, figsize=(20,3), sharey=True)
         axs = axs.ravel()
@@ -457,6 +457,7 @@ def Task_3():
         plt.figure(fig)
         fig.savefig("output/task_3/t35d_Na_moved.pdf")
         plt.show()
+
 
 
         fig, axs = plt.subplots(4, 1, figsize=(5,20))
@@ -488,6 +489,42 @@ def Task_3():
 
         timer.end()
 
+
+    if TASK_37_e: 
+        timer.start("3.7e")
+
+        # Update some params
+        b = 2.0e-3 # [m]
+        x0 = (b-a)/2
+        T = 10.0 # [s]
+        V_appl = 10.0e-3 # [V]
+        Na_channel_pos = 0.25e-3 # [m]
+
+        neuron = Neuron(a, b, x0, Nx, T, Nt,
+                        lmbda=lmbda, tau=tau, g_K=g_K, V_thr=V_thr, gamma=gamma, 
+                        VN_Na=VN_Na, VN_K=VN_K, V_appl=V_appl, V_mem=V_mem,
+                        Na_channel_pos=Na_channel_pos)
+        
+        V_crank = neuron.evolve_scheme(scheme="crank-nicolson", extra_eq=True)
+
+        clamps_x = [0.0, Na_channel_pos]
+        clamps_idx = [np.argmin(np.abs(neuron.x - neuron.x0 - x)) for x in clamps_x]
+
+        fig, axs = plt.subplots(1, 2, sharey=True, figsize=(7,4))
+        axs = axs.ravel()
+        for i in range(2):
+            axs[i].plot(neuron.t, V_crank[:, clamps_idx[i]]*1e3, color="k")
+            axs[i].grid(False)
+        
+        axs[0].set_xlabel("Time [s]\n" + r"$\mathbf{(a)}$") 
+        axs[1].set_xlabel("Time [s]\n" + r"$\mathbf{(b)}$") 
+        axs[0].set_ylabel("V [mV]")
+
+        plt.tight_layout()
+        plt.show()
+        fig.savefig("output/task_3/t37e_clamps.pdf")
+
+        timer.end()
 
 
 if __name__ == '__main__':
