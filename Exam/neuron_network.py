@@ -78,12 +78,14 @@ def evolve_VT(V, T, N=1, forward=True, method="np.linalg.solve", plot_idx=None, 
         axs (list): plt.Axes to do plots on. If None create new axis
     """
 
-    solver_time = 0.0
+    solver_time = []
     if method == "scipy.sparse.linalg.spsolve":
         T = scipy.sparse.csc_matrix(T)
 
     if plot_idx is not None:
+        show_plot = False
         if axs is None:
+            show_plot = True
             fig, axs = plt.subplots(len(plot_idx)+1, 1, sharex=True, figsize=(5,10))
             axs = axs.ravel()
 
@@ -95,7 +97,8 @@ def evolve_VT(V, T, N=1, forward=True, method="np.linalg.solve", plot_idx=None, 
         else:
             axs[0].set_title("Initial state")
         axs[0].grid(False)
-        axs[0].set_ylim([-0.04,0.4])
+        if use_lim:
+            axs[0].set_ylim([-0.04,0.4])
         axs[0].set_ylabel(r"Charge [$Q$]")
         
         axs_idx = 1
@@ -117,7 +120,7 @@ def evolve_VT(V, T, N=1, forward=True, method="np.linalg.solve", plot_idx=None, 
                 t1 = time.perf_counter_ns()
                 V = scipy.sparse.linalg.spsolve(T, V)
                 t2 = time.perf_counter_ns()
-            solver_time += t2-t1
+            solver_time.append(t2-t1)
 
         if plot_idx is not None:
             if i in plot_idx:
@@ -142,15 +145,16 @@ def evolve_VT(V, T, N=1, forward=True, method="np.linalg.solve", plot_idx=None, 
 
                 axs_idx += 1
 
-    if plot_idx is not None and axs is None:
-        plt.tight_layout()
-        plt.show()
+    if plot_idx is not None:
+        if show_plot:
+            plt.tight_layout()
+            plt.show()
 
         if len(path) > 0:
             fig.savefig(path)
 
     if forward == False:
-        print(f'Time for solver {method} per run: {solver_time/N*1e-6:.5f} ms')
+        print(f'Time for solver {method} per run ({N=}): {np.mean(solver_time)*1e-6:.5f} ms +- {np.std(solver_time)*1e-6:.5f} ms')
 
     return V
 

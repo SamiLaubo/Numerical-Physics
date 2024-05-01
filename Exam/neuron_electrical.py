@@ -30,6 +30,9 @@ class Neuron:
 
         self.Na_idx = np.argmin(np.abs(self.x - self.x0 - self.Na_channel_pos))
 
+        if self.Na_channel_pos != 0.0:
+            print(f'{self.x[self.Na_idx] = }')
+
         # Print alpha
         print(f'alpha = {self.lmbda**2*self.dt / (self.dx**2 * self.tau)}')
 

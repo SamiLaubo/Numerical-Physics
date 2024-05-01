@@ -8,30 +8,30 @@
 import os
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.animation as animation
 
 # Code with tasks
 import neuron_network as nw
 from neuron_electrical import Neuron
 
 # Choose tasks to run
-TASK_2 = False
-TASK_3 = True
+TASK_2 = True
+TASK_3 = False
 
 # Subtasks (only if super is true)
 TASK_22_a = False
 TASK_22_b = False
 TASK_22_c = False
 TASK_22_d = False
-TASK_22_e = False
-TASK_22_f = True
+TASK_22_e = True
+TASK_22_f = False
 
 TASK_35_c = True
 TASK_35_d = True
+TASK_35_e = True
 
-TASK_37_a = False
-TASK_37_b = False
-TASK_37_d = False
+TASK_37_a = True
+TASK_37_b = True
+TASK_37_d = True
 
 
 # Timer class
@@ -70,7 +70,7 @@ def Task_2():
     if TASK_22_a: 
         timer.start("2.2a")
 
-        T = nw.create_T(N_nodes=21, N_neighbours=2, plot=True, path="output/task_2/a_transformation_matrix.pdf")
+        T = nw.create_T(N_nodes=21, N_neighbours=2, plot=True, path="output/task_2/t22a_transformation_matrix.pdf")
 
         timer.end()
 
@@ -82,11 +82,11 @@ def Task_2():
         V = nw.create_V(N=21)
 
         # Evolve and plot
-        V = nw.evolve_VT(V, T, N=5, plot_idx=[0,1,2,3,4], path="output/task_2/b_random_evolution.pdf")
+        V = nw.evolve_VT(V, T, N=5, plot_idx=[0,1,2,3,4], path="output/task_2/t22b_random_evolution.pdf")
 
         # Gaussian initial wave
         V_gauss = nw.create_V(N=21, type="Gaussian")
-        V = nw.evolve_VT(V_gauss, T, N=50, plot_idx=[0,1,2,3,19], path="output/task_2/b_gaussian_evolution.pdf")
+        V = nw.evolve_VT(V_gauss, T, N=50, plot_idx=[0,1,2,3,19], path="output/task_2/t22b_gaussian_evolution.pdf")
 
         timer.end()
 
@@ -129,7 +129,7 @@ def Task_2():
         plt.tight_layout()
         plt.show()
 
-        fig.savefig("output/task_2/d_evolutions_100steps.pdf")
+        fig.savefig("output/task_2/t22d_evolutions_100steps.pdf")
 
         # Investigate values
         print(f'{V_gauss[-1] = }')
@@ -152,11 +152,14 @@ def Task_2():
 
         T_11 = nw.create_T(N_nodes=11, N_neighbours=2)
         T_10 = nw.create_T(N_nodes=10, N_neighbours=2)
-        T = nw.join_networks(T_11, T_10, plot=True, path="output/task_2/e_T.pdf")
+        T = nw.join_networks(T_11, T_10, plot=True, path="output/task_2/t22e_T.pdf")
 
         nw.eigvals(T)
-
         # np linalg faster because of small matrix - Lanczov will scale better 
+
+        # Evolve random state
+        V = nw.create_V(21)
+        V = nw.evolve_VT(V, T, N=100, plot_idx=[99], path="output/task_2/t22e_random_evolution.pdf", use_lim=False)
 
         timer.end()
 
@@ -164,8 +167,8 @@ def Task_2():
         timer.start("2.2f")
 
         # Figure
-        # fig, axs = plt.subplots(3, 3, sharex=True, figsize=(25,5))
-        # axs = axs.ravel()
+        fig, axs = plt.subplots(3, 3, sharex=True, figsize=(25,5))
+        axs = axs.ravel()
 
         # Create transformation matrix
         T = nw.create_T(N_nodes=21, N_neighbours=2)
@@ -177,18 +180,19 @@ def Task_2():
             # Create initial state
             V = nw.create_V(21, type="inv_step", normalize=True)
             # Evolve
-            # V = nw.evolve_VT(V, T, forward=False, N=5, plot_idx=[0,4], method=solver, axs=[axs[i], axs[i+3], axs[i+6]], use_lim=False)
-            V = nw.evolve_VT(V, T, forward=False, N=5, method=solver)
+            V = nw.evolve_VT(V, T, forward=False, N=5, plot_idx=[0,4], method=solver, axs=[axs[i], axs[i+3], axs[i+6]], use_lim=False)
+            axs[i+6].set_xlabel("Node index\n" + r"$\mathbf{(" + chr(97+i) + r")}$")
+            # V = nw.evolve_VT(V, T, forward=False, N=5, method=solver)
 
             # More accurate timing
             V = nw.evolve_VT(V, T, forward=False, N=100, method=solver)
 
         # Plot
-        # plt.figure(fig)
-        # plt.tight_layout()
-        # plt.show()
+        plt.figure(fig)
+        plt.tight_layout()
+        plt.show()
 
-        # fig.savefig("output/task_2/f_compare_solvers.pdf")
+        fig.savefig("output/task_2/t22f_compare_solvers.pdf")
 
         timer.end()
 
@@ -196,7 +200,6 @@ def Task_2():
 def Task_3():
     timer = Timer()
 
-        
     if TASK_35_c: 
         timer.start("3.5c")
 
@@ -282,6 +285,49 @@ def Task_3():
 
         timer.end()
 
+    if TASK_35_e: 
+        timer.start("3.5e")
+
+        # Parameters
+        a = 0.0 # [m]
+        b = 30.0 # [m]
+        x0 = (b-a)/2
+        Nx = 300
+        Nt = 100
+
+        # Ts to simulate
+        method_T = {
+            "explicit euler": np.linspace(0.3, 1, 7),
+            "implicit euler": np.linspace(100, 300, 7),
+            "crank-nicolson": np.linspace(25, 32, 7)
+        }
+        
+        # Figure
+        fig, axs = plt.subplots(3, 7, figsize=(30,9))
+        axs = axs.ravel()
+
+        # For all methods
+        for method_idx, method in enumerate(["explicit euler", "implicit euler", "crank-nicolson"]):
+
+            # Different T -> different alpha
+            for i, T in enumerate(method_T.get(method)):
+                # Evolve and plot
+                neuron = Neuron(a, b, x0, Nx, T, Nt)
+                V = neuron.evolve_scheme(scheme=method)
+                neuron.plot_evolution(V, ax=axs[method_idx*7 + i], plot_idxs=[len(V)-1])
+
+                axs[method_idx*7 + i].set_title(r"$\alpha =$" + f" {neuron.lmbda**2*neuron.dt / (neuron.dx**2 * neuron.tau):.4f}")
+                
+                if i == 3:
+                    axs[method_idx*7 + i].set_xlabel("x [m]\n" + r"$\mathbf{(" + chr(97+method_idx) + r")}$")
+
+        plt.tight_layout()
+        plt.figure(fig)
+        fig.savefig("output/task_3/t35e_stability_appendix.pdf")
+        plt.show()
+
+        timer.end()
+
 
     # System parameters
     a = 0.0 # [m]
@@ -314,14 +360,14 @@ def Task_3():
         V_crank = neuron.evolve_scheme(scheme="crank-nicolson", extra_eq=True)
 
         # Plot certain times
-        idxs = np.linspace(0, len(V_crank)-1, 4, dtype=int)
-        idxs = np.zeros(5, dtype=int)
-        idxs[1] = np.argmin(np.abs(neuron.t - 0.5))
-        idxs[2] = np.argmin(np.abs(neuron.t - 1.))
-        idxs[3] = np.argmin(np.abs(neuron.t - 1.5))
-        idxs[4] = np.argmin(np.abs(neuron.t - T))
+        plot_idxs = np.linspace(0, len(V_crank)-1, 4, dtype=int)
+        plot_idxs = np.zeros(5, dtype=int)
+        plot_idxs[1] = np.argmin(np.abs(neuron.t - 0.5))
+        plot_idxs[2] = np.argmin(np.abs(neuron.t - 1.))
+        plot_idxs[3] = np.argmin(np.abs(neuron.t - 1.5))
+        plot_idxs[4] = np.argmin(np.abs(neuron.t - T))
         neuron.plot_evolution(V_crank, path="output/task_3/t37a_V_drop.pdf",
-                              text_pad=1, use_milli=True, idxs=idxs, top_text=True)
+                              text_pad=1, use_milli=True, plot_idxs=plot_idxs, top_text=True)
         print(f'{V_crank[-1][0] = }')
 
         timer.end()
@@ -350,15 +396,15 @@ def Task_3():
             V_crank = neuron.evolve_scheme(scheme="crank-nicolson", extra_eq=True)
             
             # Plot certain times
-            idxs = np.zeros(3, dtype=int)
-            idxs[1] = np.argmin(np.abs(neuron.t - 0.2))
-            idxs[2] = np.argmin(np.abs(neuron.t - T))
-            neuron.plot_evolution(V_crank, ax=axs[i],  idxs=idxs,
+            plot_idxs = np.zeros(3, dtype=int)
+            plot_idxs[1] = np.argmin(np.abs(neuron.t - 0.2))
+            plot_idxs[2] = np.argmin(np.abs(neuron.t - T))
+            neuron.plot_evolution(V_crank, ax=axs[i],  plot_idxs=plot_idxs,
                                   text_pad=0.5, use_milli=True, colors=True)
 
             axs[i].set_title(r"$V_{appl} = $" + f" {V_appl*1000:.0f} mV")
-            axs[i].set_ylabel(r"$V$ [mV]")
-            axs[i].set_xlabel(r"$x$ [mm]" + "\n" + r"$\textbf{(" + chr(97+i) + r")}$")
+            axs[i].set_ylabel(r"V [mV]")
+            axs[i].set_xlabel(r"x [mm]" + "\n" + r"$\textbf{(" + chr(97+i) + r")}$")
 
         plt.tight_layout()
         plt.figure(fig)
@@ -391,26 +437,53 @@ def Task_3():
         axs = axs.ravel()
         
         # Plot certain times
-        idxs = np.zeros(7, dtype=int)
-        idxs[1] = np.argmin(np.abs(neuron.t - 0.03))
-        idxs[2] = np.argmin(np.abs(neuron.t - 0.1))
-        idxs[3] = np.argmin(np.abs(neuron.t - 0.2))
-        idxs[4] = np.argmin(np.abs(neuron.t - 0.3))
-        idxs[5] = np.argmin(np.abs(neuron.t - 0.6))
-        idxs[6] = np.argmin(np.abs(neuron.t - T))
+        plot_idxs = np.zeros(7, dtype=int)
+        plot_idxs[1] = np.argmin(np.abs(neuron.t - 0.03))
+        plot_idxs[2] = np.argmin(np.abs(neuron.t - 0.1))
+        plot_idxs[3] = np.argmin(np.abs(neuron.t - 0.2))
+        plot_idxs[4] = np.argmin(np.abs(neuron.t - 0.3))
+        plot_idxs[5] = np.argmin(np.abs(neuron.t - 0.6))
+        plot_idxs[6] = np.argmin(np.abs(neuron.t - T))
 
-        for i, idx in enumerate(idxs):
-            neuron.plot_evolution(V_crank, ax=axs[i],  idxs=[idx],
-                                    text_pad=0.5, use_milli=True, text=False)
+        for i, idx in enumerate(plot_idxs):
+            neuron.plot_evolution(V_crank, ax=axs[i],  plot_idxs=[idx], use_milli=True, text=False)
 
             axs[i].set_title(f"t = {neuron.t[idx]:.2f} s")
             axs[i].set_ylabel("")
-            axs[i].set_xlabel(r"$x$ [mm]")
+            axs[i].set_xlabel(r"x [mm]")
 
-        axs[0].set_ylabel(r"$V$ [mV]")
+        axs[0].set_ylabel(r"V [mV]")
         plt.tight_layout()
         plt.figure(fig)
         fig.savefig("output/task_3/t35d_Na_moved.pdf")
+        plt.show()
+
+
+        fig, axs = plt.subplots(4, 1, figsize=(5,20))
+        axs = axs.ravel()
+
+        # Test multiple V_appl
+        for i, V_appl in enumerate([6.6e-3, 6.7e-3, 6.8e-3, 6.9e-3]):
+            # Create class
+            neuron = Neuron(a, b, x0, Nx, T, Nt,
+                            lmbda=lmbda, tau=tau, g_K=g_K, V_thr=V_thr, gamma=gamma, 
+                            VN_Na=VN_Na, VN_K=VN_K, V_appl=V_appl, V_mem=V_mem,
+                            Na_channel_pos=Na_channel_pos)
+            
+            # Evolve with Crank-Nicolson
+            V_crank = neuron.evolve_scheme(scheme="crank-nicolson", extra_eq=True)
+            
+            # Plot certain times
+            neuron.plot_evolution(V_crank, ax=axs[i],  plot_idxs=[len(neuron.t)-1],
+                                  text_pad=0.2, use_milli=True, colors=False)
+
+            axs[i].set_title(r"$V_{appl} = $" + f" {V_appl*1000:.2f} mV")
+            axs[i].set_ylabel(r"V [mV]")
+            axs[i].set_xlabel(r"x [mm]" + "\n" + r"$\textbf{(" + chr(97+i) + r")}$")
+
+        plt.tight_layout()
+        plt.figure(fig)
+        fig.savefig("output/task_3/t37d_Vappl_appendix.pdf")
         plt.show()
 
         timer.end()
