@@ -66,7 +66,7 @@ def create_V(N, type="random", normalize=True):
     return V
 
 # 2.2.b
-def evolve_VT(V, T, N=1, forward=True, method="np.linalg.solve", plot_idx=None, path="", axs=None, titles=None, use_lim=True):
+def evolve_VT(V, T, N=1, forward=True, method="np.linalg.solve", plot_idx=None, path="", axs=None, titles=None, use_lim=True, figsize=(5,10)):
     """Evolve network
 
     Args:
@@ -86,7 +86,7 @@ def evolve_VT(V, T, N=1, forward=True, method="np.linalg.solve", plot_idx=None, 
         show_plot = False
         if axs is None:
             show_plot = True
-            fig, axs = plt.subplots(len(plot_idx)+1, 1, sharex=True, figsize=(5,10))
+            fig, axs = plt.subplots(len(plot_idx)+1, 1, sharex=True, figsize=figsize)
             axs = axs.ravel()
 
         axs[0].plot(V, "-o", color="k")
@@ -99,7 +99,7 @@ def evolve_VT(V, T, N=1, forward=True, method="np.linalg.solve", plot_idx=None, 
         axs[0].grid(False)
         if use_lim:
             axs[0].set_ylim([-0.04,0.4])
-        axs[0].set_ylabel(r"Charge [$Q$]")
+        axs[0].set_ylabel(r"Charge [C]")
         
         axs_idx = 1
 
@@ -135,7 +135,7 @@ def evolve_VT(V, T, N=1, forward=True, method="np.linalg.solve", plot_idx=None, 
                 axs[axs_idx].grid(False)
                 if use_lim:
                     axs[axs_idx].set_ylim([-0.04,0.4])
-                axs[axs_idx].set_ylabel(r"Charge [$Q$]")
+                axs[axs_idx].set_ylabel(r"Charge [C]")
 
                 if axs_idx == len(plot_idx):
                     if titles is not None:
@@ -211,6 +211,7 @@ def eigvals(T, verbal=True):
         print("\nEigenvectors:")
         print("\tLargest magnitude eigenvalue:")
         print(f'\tAngle between Lanczov and linalg: {angle(eig_vec_max[:, -1], np_eigvec[:, np_eigval_argsort[-1]]):.5f} rad')
+        print(f'\tAngle between Lanczov and linalg: {angle(eig_vec_max[:, -2], np_eigvec[:, np_eigval_argsort[-1]]):.5f} rad')
         
         print("\n\tSmallest magnitude eigenvalue:")
         print(f'\tAngle between Lanczov and linalg (1): {angle(eig_vec_min[:, -1], np_eigvec[:, np_eigval_argsort[0]]):.5f} rad')

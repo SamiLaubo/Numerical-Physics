@@ -14,16 +14,16 @@ import neuron_network as nw
 from neuron_electrical import Neuron
 
 # Choose tasks to run
-TASK_2 = False
-TASK_3 = True
+TASK_2 = True
+TASK_3 = False
 
 # Subtasks (only if super is true)
-TASK_22_a = True
-TASK_22_b = True
-TASK_22_c = True
-TASK_22_d = True
+TASK_22_a = False
+TASK_22_b = False
+TASK_22_c = False
+TASK_22_d = False
 TASK_22_e = True
-TASK_22_f = True
+TASK_22_f = False
 
 TASK_35_c = False
 TASK_35_d = False
@@ -87,7 +87,7 @@ def Task_2():
 
         # Gaussian initial wave
         V_gauss = nw.create_V(N=21, type="Gaussian")
-        V = nw.evolve_VT(V_gauss, T, N=50, plot_idx=[0,1,2,3,19], path="output/task_2/t22b_gaussian_evolution.pdf")
+        V = nw.evolve_VT(V_gauss, T, N=50, plot_idx=[0,2,19], path="output/task_2/t22b_gaussian_evolution.pdf", figsize=(8,5))
 
         timer.end()
 
@@ -160,7 +160,12 @@ def Task_2():
 
         # Evolve random state
         V = nw.create_V(21)
-        V = nw.evolve_VT(V, T, N=100, plot_idx=[99], path="output/task_2/t22e_random_evolution.pdf", use_lim=False)
+        V = nw.evolve_VT(V, T, N=100, plot_idx=[99], path="output/task_2/t22e_random_evolution.pdf", use_lim=False, figsize=(8,4))
+        
+        # Check angles
+        eigvals, eigvecs = nw.eigvals(T, verbal=False)
+        print(f'{nw.angle(V, eigvecs[:,-1]) = }')
+        print(f'{nw.angle(V, eigvecs[:,-2]) = }')
 
         timer.end()
 
@@ -409,7 +414,7 @@ def Task_3():
 
         plt.tight_layout()
         plt.figure(fig)
-        fig.savefig("output/task_3/t35b_schemes_compare.pdf")
+        fig.savefig("output/task_3/t37b_schemes_compare.pdf")
         plt.show()
 
 
@@ -455,7 +460,7 @@ def Task_3():
         axs[0].set_ylabel(r"V [mV]")
         plt.tight_layout()
         plt.figure(fig)
-        fig.savefig("output/task_3/t35d_Na_moved.pdf")
+        fig.savefig("output/task_3/t37d_Na_moved.pdf")
         plt.show()
 
 
