@@ -14,8 +14,8 @@ import neuron_network as nw
 from neuron_electrical import Neuron
 
 # Choose tasks to run
-TASK_2 = True
-TASK_3 = False
+TASK_2 = False
+TASK_3 = True
 
 # Subtasks (only if super is true)
 TASK_22_a = False
@@ -29,9 +29,9 @@ TASK_35_c = False
 TASK_35_d = False
 TASK_35_e = False
 
-TASK_37_a = False
-TASK_37_b = False
-TASK_37_d = False
+TASK_37_a = True
+TASK_37_b = True
+TASK_37_d = True
 TASK_37_e = True
 
 
@@ -348,7 +348,7 @@ def Task_3():
     tau = 2.0e-3 # [s]
     g_K = 5.0 # [Ohm^-1 m^-2]
     V_thr = -40e-3 # [V]
-    gamma = 0.5e-3 # [V^-1]
+    gamma = 0.5e3 # [V^-1]
     VN_Na = 56.0e-3 # [V]
     VN_K = -76.0e-3 # [V]
     V_appl = -50.0e-3 # [V]
@@ -391,7 +391,8 @@ def Task_3():
         axs = axs.ravel()
 
         # Test multiple V_appl
-        for i, V_appl in enumerate([-39e-3, -30e-3, -10e-3, 10e-3]):
+        # for i, V_appl in enumerate([-39e-3, -30e-3, -10e-3, 10e-3]):
+        for i, V_appl in enumerate([-41e-3, -39e-3, -10e-3, 30e-3]):
             # Create class
             neuron = Neuron(a, b, x0, Nx, T, Nt,
                             lmbda=lmbda, tau=tau, g_K=g_K, V_thr=V_thr, gamma=gamma, 
