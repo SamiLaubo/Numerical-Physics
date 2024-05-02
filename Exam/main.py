@@ -14,13 +14,13 @@ import neuron_network as nw
 from neuron_electrical import Neuron
 
 # Choose tasks to run
-TASK_2 = False
-TASK_3 = True
+TASK_2 = True
+TASK_3 = False
 
 # Subtasks (only if super is true)
 TASK_22_a = False
 TASK_22_b = False
-TASK_22_c = False
+TASK_22_c = True
 TASK_22_d = False
 TASK_22_e = True
 TASK_22_f = False

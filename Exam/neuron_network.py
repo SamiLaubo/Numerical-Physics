@@ -183,17 +183,17 @@ def eigvals(T, verbal=True):
     # Scipy with Lanczov method
     # Calculates biggest and smallest in magnitude so need to check multiple
     # because of negative eigenvalues
-    t1 = time.time()
+    t1 = time.perf_counter_ns()
     eig_val_max, eig_vec_max = scipy.sparse.linalg.eigsh(T, which="LM", k=3)
     eig_val_min, eig_vec_min = scipy.sparse.linalg.eigsh(T, which="SM", k=3)
-    t2 = time.time()
-    print(f'Lanczov time: {t2 - t1}')
+    t2 = time.perf_counter_ns()
+    print(f'Lanczov time: {(t2 - t1)*1e-6} ms')
 
     # Numpy version - not using iterative method
-    t3 = time.time()
+    t3 = time.perf_counter_ns()
     np_eigval, np_eigvec = np.linalg.eigh(T)
-    t4 = time.time()
-    print(f'Numpy linalg time: {t4 - t3}')
+    t4 = time.perf_counter_ns()
+    print(f'Numpy linalg time: {(t4 - t3)*1e-6} ms')
 
     # Find three largest and smallest eigenvalues in magnitude
     np_eigval_argsort = np.argsort(np.abs(np_eigval))
