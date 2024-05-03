@@ -1,5 +1,3 @@
-# Created by Sami Laubo 07.03.2024
-
 # For VSCode development
 %load_ext autoreload
 %autoreload 2
@@ -11,8 +9,8 @@ import root_finder
 # In this code: t' = 2mL^2/hbar * t
 
 # Choose tasks to run
-TASK_2 = False
-TASK_3 = False
+TASK_2 = True
+TASK_3 = True
 TASK_4 = True
 
 # Subtasks (only if super is true)
@@ -24,15 +22,15 @@ TASK_2_11 = True
 
 TASK_3_1 = True
 TASK_3_2 = True
-TASK_3_3 = False
-TASK_3_4 = False
-TASK_3_5 = False
-TASK_3_6 = False
-TASK_3_7 = False
-TASK_3_9 = False
+TASK_3_3 = True
+TASK_3_4 = True
+TASK_3_5 = True
+TASK_3_6 = True
+TASK_3_7 = True
+TASK_3_9 = True
 
-TASK_4_1 = False
-TASK_4_2 = False
+TASK_4_1 = True
+TASK_4_2 = True
 TASK_4_4 = True
 
 # Constants
@@ -176,7 +174,6 @@ def Task_3():
     
         S = Schrodinger(pot_type="barrier")
         S.eigvals_under_barrier(v0_low=0, v0_high=1e5, N=10, path="output/task_3/t36_eigvals_under_barrier.pdf")
-    
 
         # Find value where #lambda 0->1
         v0_low, v0_high = 22, 23
@@ -185,7 +182,6 @@ def Task_3():
             v0_low, v0_high = S.eigvals_under_barrier(v0_low=v0_low, v0_high=v0_high, N=10, plot=False)
         
         t2 = time.time(); print(f'Task 3.6 time: {t2 - t1:.4e}')
-    
 
     
     if TASK_3_7:
@@ -197,9 +193,6 @@ def Task_3():
         S.init_cond(name="eigenfuncs", eigenfunc_idxs=[1])
         S.plot_Psi_0()
         # Update end time
-        # S.T = np.pi / (S.eig_vals[1]) * S.t0
-
-        # Fiddle with 100 to see when it messes up
         S.T = 1 * S.dx_**2
         # Discretize t again
         S.discretize_x_t()
@@ -213,24 +206,6 @@ def Task_3():
     
     if TASK_3_9:
         t1 = time.time(); print("\nTask 3.9")
-
-        # v0 = 1e3
-        # S = Schrodinger(Nx=NX, pot_type="barrier", v0=v0, Nt=10)
-        # S.eigen()
-        # S.init_cond(name="eigenfuncs", eigenfunc_idxs=[1])
-        # # S.init_cond(name="delta", eigenfunc_idxs=[1])
-        # # S.plot_Psi_0()
-        # # Update end time
-        # # S.T = np.pi / (S.eig_vals[1]) * S.t0
-
-        # # Fiddle with 100 to see when it messes up
-        # S.T = 1 * S.dx_**2
-        # # Discretize t again
-        # S.discretize_x_t()
-        # print(f'{S.dt_/S.dx_**2 = }')
-
-        # # Use Crank Nicolson to solve
-        # S.forward_scheme(method="Crank Nicolson", plot=True, animate=False)
         
         # With delta inital compared to 2.11
         S = Schrodinger(Nx=NX, pot_type="barrier", v0=0, Nt=40, T=2e-7)
@@ -265,8 +240,6 @@ def Task_4():
         v0 = 100
         vr_low = -1e3
         vr_high = 1e3
-        # vr_low = -100
-        # vr_high = 100
         S = Schrodinger(Nx=NX, pot_type="detuning", v0=v0, Nt=10, vr=0)
         S.eigen()
         S.init_cond(name="eigenfuncs", eigenfunc_idxs=[0])
@@ -301,8 +274,6 @@ def Task_4():
         S.eigen()
         epsilon_0 = S.eig_vals[1] - S.eig_vals[0]
         tau = 0.02 * epsilon_0
-        # S.T = 12*np.pi*hbar/tau
-        # S.T = 12*np.pi*hbar/tau
         S.T = 12*np.pi/tau
         
         # Discretize again
@@ -329,27 +300,3 @@ if __name__ == '__main__':
 
     if TASK_4:
         Task_4()
-
-
-
-# TODO:
-    # Fix same size for Nx in loaded eigvals and Psi_0: is correct for 1000
-    # check that disc_x_t comes before
-    # Fix potential plot in Forward euler og Crank
-    # 3.8-3.9
-    # Endre slik at n=0 er laveste state
-    # Do error calc with psi and not psi**2
-    
-    # Figure text equal to Figure caption in report
-
-
-# Questions:
-    # Task 3.3: Initial cond psi n=1,3?
-    # Task 3.3: No tunneling
-    # Task 3.7: Normalisere etter hver loop?
-    # Task 4.4: What is wrong
-
-
-# Sammenligne res:
-    # Task 3.5 - Root values vs eigenvalues
-    # 3.8-3.9

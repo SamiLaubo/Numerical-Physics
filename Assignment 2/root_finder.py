@@ -16,12 +16,12 @@ def plot_f(v0, N=1000, eig_vals=[], path=""):
     lmbdas = np.linspace(0, v0, N)
 
     fig, ax = plt.subplots()
-    plt.plot(lmbdas, f(lmbdas, v0), label=r"$f(\lambda)$")
+    plt.plot(lmbdas, f(lmbdas, v0), color='k', label=r"$f(\lambda)$")
     y_lims = ax.get_ylim()
     
     # Plot eigenvalues from numerical scheme
     if len(eig_vals):
-        plt.vlines(eig_vals, *y_lims, linestyles="--", color="black", label="Numerical\neigenvalues")
+        plt.vlines(eig_vals, *y_lims, linestyles="--", color="k", label="Numerical\neigenvalues")
 
         # Text
         text_i = []

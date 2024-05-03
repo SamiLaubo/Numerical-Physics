@@ -1,4 +1,6 @@
-# Main code that run all tasks
+# Running this file create all plots and results in the report
+# Plots are saved in output/task../...
+# Other results are printed out
 
 # For VSCode development
 %load_ext autoreload
@@ -14,25 +16,25 @@ import neuron_network as nw
 from neuron_electrical import Neuron
 
 # Choose tasks to run
-TASK_2 = True
-TASK_3 = False
+TASK_2 = False
+TASK_3 = True
 
 # Subtasks (only if super is true)
-TASK_22_a = False
-TASK_22_b = False
+TASK_22_a = True
+TASK_22_b = True
 TASK_22_c = True
-TASK_22_d = False
+TASK_22_d = True
 TASK_22_e = True
-TASK_22_f = False
+TASK_22_f = True
 
 TASK_35_c = False
 TASK_35_d = False
 TASK_35_e = False
 
-TASK_37_a = True
-TASK_37_b = True
+TASK_37_a = False
+TASK_37_b = False
 TASK_37_d = True
-TASK_37_e = True
+TASK_37_e = False
 
 
 # Timer class
@@ -128,6 +130,8 @@ def Task_2():
         # Plot
         plt.figure(fig)
         plt.tight_layout()
+        for ax in axs:
+            ax.set_title("")
         plt.show()
 
         fig.savefig("output/task_2/t22d_evolutions_100steps.pdf")
@@ -240,10 +244,10 @@ def Task_3():
         neuron.plot_evolution(V_implicit, ax=axs[2], plot_idxs=plot_times_idx)
         neuron.plot_evolution(V_crank, ax=axs[3], plot_idxs=plot_times_idx)
 
-        axs[0].set_title("Analytical")
-        axs[1].set_title("Implicit Euler")
-        axs[2].set_title("Explicit Euler")
-        axs[3].set_title("Crank-Nicolson")
+        # axs[0].set_title("Analytical")
+        # axs[1].set_title("Implicit Euler")
+        # axs[2].set_title("Explicit Euler")
+        # axs[3].set_title("Crank-Nicolson")
 
         axs[0].set_xlabel(r"x [m]" + "\n" + r"$\textbf{(a)}$")
         axs[1].set_xlabel(r"x [m]" + "\n" + r"$\textbf{(b)}$")
@@ -322,7 +326,7 @@ def Task_3():
                 V = neuron.evolve_scheme(scheme=method)
                 neuron.plot_evolution(V, ax=axs[method_idx*7 + i], plot_idxs=[len(V)-1])
 
-                axs[method_idx*7 + i].set_title(r"$\alpha =$" + f" {neuron.lmbda**2*neuron.dt / (neuron.dx**2 * neuron.tau):.4f}")
+                # axs[method_idx*7 + i].set_title(r"$\alpha =$" + f" {neuron.lmbda**2*neuron.dt / (neuron.dx**2 * neuron.tau):.4f}")
                 
                 if i == 3:
                     axs[method_idx*7 + i].set_xlabel("x [m]\n" + r"$\mathbf{(" + chr(97+method_idx) + r")}$")
@@ -409,7 +413,7 @@ def Task_3():
             neuron.plot_evolution(V_crank, ax=axs[i],  plot_idxs=plot_idxs,
                                   text_pad=0.5, use_milli=True, colors=True)
 
-            axs[i].set_title(r"$V_{appl} = $" + f" {V_appl*1000:.0f} mV")
+            # axs[i].set_title(r"$V_{appl} = $" + f" {V_appl*1000:.0f} mV")
             axs[i].set_ylabel(r"V [mV]")
             axs[i].set_xlabel(r"x [mm]" + "\n" + r"$\textbf{(" + chr(97+i) + r")}$")
 
@@ -466,7 +470,7 @@ def Task_3():
 
 
 
-        fig, axs = plt.subplots(4, 1, figsize=(5,20))
+        fig, axs = plt.subplots(4, 1, figsize=(5,10))
         axs = axs.ravel()
 
         # Test multiple V_appl

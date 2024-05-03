@@ -1,5 +1,3 @@
-# Created by Sami Laubo 26.02.2024
-
 import os
 import glob
 
@@ -13,25 +11,11 @@ import matplotlib.animation as animation
 from IPython.display import set_matplotlib_formats
 
 # Plot params
-# plt.style.use('ggplot')
 plt.style.use('seaborn-v0_8-whitegrid')
 fontsize = 12
 plt.rcParams.update({
-    "axes.titlesize": fontsize,
-    "axes.labelsize": fontsize,
-    # "axes.grid": True,
-    # "axes.linewidth": 1,
-    # "lines.linewidth": 1.5,
-    # "lines.markersize": 7,
-    # "figure.figsize": (9, 4.5),
-    # 'axes.titlepad': 10,
-    "ytick.labelsize": fontsize,
-    "xtick.labelsize": fontsize,
-    # "ytick.major.pad": 5,
-    # "xtick.major.pad": 5,
-    # 'legend.loc': 'best',
-    "legend.fontsize": fontsize,
-    # "legend.handlelength": 1.5,
+    "font.size": fontsize,
+    "axes.labelsize": 16,
     "legend.frameon": True,
     "mathtext.fontset": "stix",
     "font.family": "STIXGeneral"
@@ -61,11 +45,7 @@ class Schrodinger:
         self.discretize_pot()
 
     def discretize_x_t(self):
-        # self.t, self.dt = np.linspace(0, self.T, self.Nt, retstep=True)
-        # self.x, self.dx = np.linspace(0, self.L, self.Nx, retstep=True)
-
         # Dimentionless t' and x'
-        # self.t_, self.dt_ = np.linspace(0, self.T / self.t0, self.Nt, retstep=True)
         self.t_, self.dt_ = np.linspace(0, self.T, self.Nt, retstep=True)
         self.x_, self.dx_ = np.linspace(0, 1, self.Nx, retstep=True)
 
@@ -120,11 +100,8 @@ class Schrodinger:
         A /= -self.dx_**2
 
         # Find eigen values and vectors
-        # self.eig_vals, self.eig_vecs = np.linalg.eigh(A)
         diag = 2 / self.dx_**2 + self.pot
         offdiag = -np.ones(self.Nx-1) / self.dx_**2
-        # diag = -2 / self.dx_**2 * self.pot
-        # offdiag = -np.ones(self.Nx-1) / self.dx_**2
         self.eig_vals, self.eig_vecs = scipy.linalg.eigh_tridiagonal(diag, offdiag)
 
         # Normalize
@@ -146,7 +123,6 @@ class Schrodinger:
 
         # Loop through Nx (dx)
         for i in range(N):
-            # eig_vals_num, _, eig_vals_analytical = self.eigen(Nx=Nx[i], save=save, plot=False)
             # Update Nx and discretizations
             self.update_Nx(Nx[i])
 
@@ -168,7 +144,6 @@ class Schrodinger:
             x_text = (21*x_lims[1] - x_lims[0]) / 20 
             plt.text(x_text, eigvec_error[i, 0], f"n={i}", fontsize=fontsize)
 
-        plt.title("Eigenfunction error")
         plt.xlabel(r"$\Delta x'$")
         plt.ylabel("$RMSE$")
         plt.show()
@@ -254,12 +229,8 @@ class Schrodinger:
             else:
                 self.Psi_0_text += r"$"
 
-
-
-
     def evolve(self, plot=True, animate=False, start_idx_plot=0, path=""):
         # Load eigenvalues and vectors
-        # eig_vals, eig_vecs = self.load_eigs()
         alpha = np.zeros(len(self.eig_vals))
 
         # Compute alpha_n
@@ -283,7 +254,6 @@ class Schrodinger:
 
             # Plot Psi
             fig, ax = plt.subplots()
-            plt.title("Probability density\n" + self.Psi_0_text)
             plt.xlabel(r"$x'$")
             plt.ylabel(r"$|\Psi(x', t')|^2$")
             for i in range(start_idx_plot,5):
@@ -300,7 +270,6 @@ class Schrodinger:
         # Animation
         if animate:
             fig, ax = plt.subplots()
-            # plt.ylim([-0.001, 0.01])
 
             # Psi_0
             line, = ax.plot(self.x_, np.conj(self.Psi_0)*self.Psi_0, label=r"t'=0.00s")
@@ -329,7 +298,6 @@ class Schrodinger:
                 blit=True
             )
 
-            # path = "output/t33_prob_dens/test1.gif"
             if os.path.exists(path):
                 os.remove(path)
             anim.save(path, fps=60)
@@ -345,28 +313,18 @@ class Schrodinger:
         for i in range(n_eig_vecs-1, -1, -1):
             plt.plot(self.x_, self.eig_vecs[:, i], label=f"n = {i+1}", color=cmap(i))
 
-        # Potential
-        # self.plot_insert_potential(fig, ax)
-
         # Plot second solution with x dots
         if Schrodinger_2 is not None:
             for i in range(3, -1, -1):
                 skip = len(Schrodinger_2.x_)//50
                 plt.plot(Schrodinger_2.x_[::skip], Schrodinger_2.eig_vecs[:, i][::skip], 'x', color=cmap(i))
             
-        plt.title("Eigenstates")
         plt.ylabel("$\Psi(x')$")
         plt.xlabel("$x'$")
         plt.grid(False)
-        # plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
         plt.legend(loc=(0.325, 0.7), )
-        # plt.tight_layout()
-        # plt.show()
-        # if len(path) > 0:
-        #     fig.savefig(path + "eigenstates.pdf")
 
         # Energy levels
-        # fig, ax = plt.subplots()
         text_i = []
         ax_right = ax.twinx()
         ax_right.grid(False)
@@ -383,9 +341,7 @@ class Schrodinger:
 
         # Potential
         self.plot_insert_potential(fig, ax_right, true_size=True)
-        # plt.title("Eigenvalues")
         ax_right.set_ylabel(r"$\lambda_n = \frac{2mL^2}{\hbar^2}E_n$")
-        # plt.show()
         if len(path) > 0:
             fig.savefig(path + "eigenvalues.pdf")
 
@@ -393,10 +349,9 @@ class Schrodinger:
         # Task 2.4
         if plot_vals_n:
             fig = plt.figure()
-            plt.plot(self.n, self.lmbda, '--', label="Analytical eigenvalues", color="k")
-            plt.plot(self.n, self.eig_vals, label="Numerical eigenvalues", color="k")
+            plt.plot(self.n[::20], self.lmbda[::20], '.', label="Analytical eigenvalues", color="k")
+            plt.plot(self.n[::20], self.eig_vals[::20], 'x', label="Numerical eigenvalues", color="k", )
 
-            plt.title("Eigenvalues")
             plt.xlabel("$n$")
             plt.ylabel(r"$\lambda_n = \frac{2mL^2}{\hbar^2}E_n$")
             plt.legend()
@@ -440,8 +395,6 @@ class Schrodinger:
 
         # Find #lambdas under barrier
         for i, v00 in enumerate(v0):
-            # S = Schrodinger(pot_type="barrier", v0=v00)
-            # S.eigen()
             self.v0 = v00
             self.discretize_pot()
             self.eigen()
@@ -450,10 +403,9 @@ class Schrodinger:
         # Plot
         if plot:
             fig = plt.figure()
-            plt.plot(v0, lmbda_under)
+            plt.plot(v0, lmbda_under, 'x', color='k')
             plt.xlabel(r"$\nu_0 = \frac{2mL^2}{\hbar^2}\cdot V_0$")
             plt.ylabel("Count")
-            plt.title("Number of eigenvalues less than barrier height")
             plt.show()
             if len(path):
                 fig.savefig(path)
@@ -495,16 +447,12 @@ class Schrodinger:
         if plot:
             # Plot Psi
             fig, ax = plt.subplots()        
-            title = "Evolution of the probability density with " + method
-            if self.Psi_0_text is not None:
-                title += "\n" + self.Psi_0_text
-            plt.title(title)
             plt.ylabel(r"$|\Psi(x', t')|^2$")
             plt.xlabel("x'")
 
             # Plot for different CFL values
             if CFL:
-            # Remove dt
+                # Remove dt
                 A /= self.dt_
 
                 for dt in [110, 90, 70]:
@@ -520,32 +468,21 @@ class Schrodinger:
 
                     for i in range(self.Nt-1):
                         # Calculate evolution
-
                         Psi = psi_step(Psi, AA, method, self.x_)
-
-                        # Plot only for five times
-                        # if i % ((self.Nt-1)//4) == 0:
-                        #     Prob_dens = np.conj(Psi) * Psi
-                        #     plt.plot(self.x_, Prob_dens, label=f"t'={self.t_[i]:.2e}")
                     
                     Prob_dens = np.conj(Psi) * Psi
                     plt.plot(self.x_, Prob_dens, label=f"CFL={self.dt_/self.dx_**2:.2f}")
             else:
                 for i in range(self.Nt-1):
                         # Calculate evolution
-
                         Psi = psi_step(Psi, A, method, self.x_)
 
                         # Plot only for five times
                         if (i % ((self.Nt-1)//5) == 0 and i != 0) or i==1:
                             Prob_dens = np.conj(Psi) * Psi
                             plt.plot(self.x_, Prob_dens, label=f"t'={self.t_[i]:.2e}")
-                    
-                    # Prob_dens = np.conj(Psi) * Psi
-                    # plt.plot(self.x_, Prob_dens, label=f"CFL={self.dt_/self.dx_**2:.2f}")
 
             self.plot_insert_potential(fig, ax, pad=0.1)
-            # plt.legend(loc="upper center")
             plt.legend(loc="best")
             plt.show()
             if len(path):
@@ -638,12 +575,11 @@ class Schrodinger:
 
         # Plot
         fig = plt.figure()
-        plt.title("Two lowest eigenvalues and amplitude for detuning")
         plt.xlabel(r"$\nu_r=\frac{2mL^2}{\hbar^2}\cdot V$")
         plt.ylabel(r"$\lambda_n = \frac{2mL^2}{\hbar^2}E_n$")
 
-        plt.plot(vr, eigenvalues_0, label=r"$\lambda_0$", color="k")
-        plt.plot(vr, eigenvalues_1, '--', label=r"$\lambda_1$", color="k")
+        plt.plot(vr, eigenvalues_0, label=r"$\lambda_1$", color="k")
+        plt.plot(vr, eigenvalues_1, '--', label=r"$\lambda_2$", color="k")
 
         plt.legend(loc="lower center")
         plt.show()
@@ -673,26 +609,25 @@ class Schrodinger:
             self.discretize_pot()
             np.fill_diagonal(H, 2/self.dx_**2 + self.pot)
 
-            # Get eigenvalues
-            # self.eigen() # eigvals for nu_r=0 only
-
             # Calculate tau
             tau[i] = scipy.integrate.simpson(self.eig_vecs[:, 0] * (H @ self.eig_vecs[:, 1]), self.x_)
 
         # Plot
         if fig is None:
             fig = plt.figure()
-            plt.title("Tunneling amplitude")
             plt.xlabel(r"$\nu_r = \frac{2mL^2}{\hbar^2}\cdot V_0$")
             plt.ylabel(r"$\tau(\nu_r)$")
         else:
             plt.figure(fig)
 
-        plt.plot(vr, tau, label=r"$\tau$", color="k", linestyle=(0, (1, 10)))
+        ax = plt.gca()
+        ax2 = ax.twinx()
+        ax2.plot(vr, tau, label=r"$\tau$", color="k", linestyle=(0, (1, 10)))
+        ax2.set_ylabel(r"$\tau$")
+        ax2.grid(False)
 
         # Fit linear regression
         slope, intercept = np.polyfit(vr, tau, 1)
-        # plt.plot(vr, slope*vr + intercept, '--', label="Linear regression", color="black")
 
         print(f'tau(vr) = {slope} * vr + {intercept}')
 
@@ -723,17 +658,10 @@ class Schrodinger:
         N = np.zeros((2,2), dtype=np.complex128)
 
         # Helper constants
-        N_const = -1j*self.dt_*tau# / hbar# * self.t0
+        N_const = -1j*self.dt_*tau
         M_const = -N_const / 2
-        exp_const = 1j*epsilon_0# / hbar# * self.t0
-        sin_const = omega#*self.t0
-
-        print(f'{self.T = }')
-        print(f'{N_const = }')
-        print(f'{M_const = }')
-        print(f'{exp_const = }')
-        print(f'{sin_const = }')
-        print(f'{epsilon_0 = }')
+        exp_const = 1j*epsilon_0
+        sin_const = omega
 
         # Set initial condition to ground state
         f[:, 0] = g0 # Since t=0 gives N=0
@@ -756,42 +684,28 @@ class Schrodinger:
                 # Add to sum
                 Nf_sum += N @ f[:, k-1]
 
-                # print(f'{N @ f[:, k-1] = }')
-
             # Update values
             sin = np.sin(sin_const * self.t_[k])
             exp_pos = np.exp(exp_const * self.t_[k])
             exp_neg = np.exp(-exp_const * self.t_[k])
-
-            if k == 2 or k == 10:
-                print(f'{exp_neg = }')
-                print(f'{exp_pos = }')
-                print(f'{sin = }')
             
             # Update M
             M[1, 0] = M_const * sin * exp_pos
             M[0, 1] = M_const * sin * exp_neg
 
-            # print(f'{M = }')
-
-
             f[:, k] = np.linalg.solve(M, Nf_sum)
 
-            # Normalize
-            # f[:, k] /= np.sqrt(np.sum(np.conj(f[:, k])*f[:, k]))
-
-        # Find probabilities for system to be in state g0
-        # Normalize
-        # f /= np.sqrt(np.sum(np.conj(f)*f, axis=0))
-        prob = g0 @ f
-        # prob /= np.sqrt(np.sum(np.conj(prob)*prob, axis=0))
+        # Find probabilities for system to be in state e0
+        prob = e0 @ f
         prob = np.conj(prob)*prob
 
         # Plot
-        plt.figure()
-        plt.plot(self.t_, prob, label="Numerical")
-        # plt.plot(self.t_, np.sin(self.m*self.L**2*tau/hbar**2 * self.t_)**2, '--', label="Analytical")
-        plt.plot(self.t_, np.sin(tau/2 * self.t_)**2, '--', label="Analytical")
+        fig = plt.figure()
+        plt.plot(self.t_[::5], prob[::5], 'x', color='k', label="Numerical")
+        plt.plot(self.t_, np.sin(tau/2 * self.t_)**2, color='k', label="Analytical")
+        plt.xlabel(r"$t'= \frac{2mL^2}{\hbar} \cdot t$")
+        plt.ylabel("p(t')")
 
         plt.legend()
         plt.show()
+        fig.savefig("output/task_4/t46_num_and_analytical.pdf")

@@ -95,8 +95,6 @@ class Neuron:
         if extra_eq:
             V[0] = (self.V_appl - self.V_mem) * np.exp(-self.x_x0_2/(2*self.lmbda**2)) + self.V_mem
         else:
-            # V[0] = np.exp(-self.x_x0_2/100)
-            # V[0] = V[0] / np.sum(V[0])
             # Same as analytical with t=1
             V[0] = 1. / np.sqrt(4*np.pi) * np.exp(-self.x_x0_2/(4) - 1)
 

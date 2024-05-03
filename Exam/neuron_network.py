@@ -244,7 +244,7 @@ def join_networks(n1, n2, normalize=True, plot=False, path=""):
     # Plot matrix
     if plot:
         fig = plt.figure()
-        sn.heatmap(T, annot=False)#, cmap="Greys")
+        sn.heatmap(T, annot=False)
         plt.xlabel("Node index")
         plt.ylabel("Node index")
         plt.show()
