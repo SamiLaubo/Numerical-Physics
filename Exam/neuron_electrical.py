@@ -157,7 +157,7 @@ class Neuron:
         text = kwargs.pop("text", True)
         
         if ax is None:
-            fig, ax = plt.subplots(figsize=(8,5))
+            fig, ax = plt.subplots(figsize=(6,4))
 
         if plot_idxs is None:
             plot_idxs = np.linspace(0, len(V)-1, plot_N_times, dtype=int)

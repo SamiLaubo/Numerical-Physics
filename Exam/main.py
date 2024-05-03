@@ -16,16 +16,16 @@ import neuron_network as nw
 from neuron_electrical import Neuron
 
 # Choose tasks to run
-TASK_2 = False
+TASK_2 = True
 TASK_3 = True
 
 # Subtasks (only if super is true)
-TASK_22_a = True
-TASK_22_b = True
-TASK_22_c = True
-TASK_22_d = True
-TASK_22_e = True
-TASK_22_f = True
+TASK_22_a = False
+TASK_22_b = False
+TASK_22_c = False
+TASK_22_d = False
+TASK_22_e = False
+TASK_22_f = False
 
 TASK_35_c = False
 TASK_35_d = False
@@ -51,9 +51,10 @@ class Timer:
 
 # Plotting setup
 plt.style.use('seaborn-v0_8-whitegrid')
-fontsize = 12
+fontsize = 16
 plt.rcParams.update({
     "font.size": fontsize,
+    "axes.labelsize": 18,
     "legend.frameon": True,
     "mathtext.fontset": "stix",
     "font.family": "STIXGeneral"
@@ -237,7 +238,7 @@ def Task_3():
         plot_times = np.array([0.0, 0.5, 1, 2])
         plot_times_idx = np.array([np.argmin(np.abs(neuron.t - t)) for t in plot_times])
         
-        fig, axs = plt.subplots(1, 4, figsize=(20,3))
+        fig, axs = plt.subplots(1, 4, figsize=(20,4))
         axs = axs.ravel()
         neuron.plot_evolution(V_analytical, ax=axs[0], plot_idxs=plot_times_idx)
         neuron.plot_evolution(V_explicit, ax=axs[1], plot_idxs=plot_times_idx)
@@ -260,7 +261,7 @@ def Task_3():
         plt.show()
 
         # Accuracy meassure
-        fig = plt.figure()
+        fig = plt.figure(figsize=(6,4))
         plt.plot(neuron.t, (np.abs(V_analytical - V_explicit)).sum(axis=1)*1e3, label="Explicit")
         plt.plot(neuron.t, (np.abs(V_analytical - V_implicit)).sum(axis=1)*1e3, label="Implicit")
         plt.plot(neuron.t, (np.abs(V_analytical - V_crank)).sum(axis=1)*1e3, label="Crank-Nicolson")
@@ -391,12 +392,12 @@ def Task_3():
         x0 = (b-a)/2
         T = 10.0
 
-        fig, axs = plt.subplots(1, 4, figsize=(20,5))
+        fig, axs = plt.subplots(1, 2, figsize=(10,7))
         axs = axs.ravel()
 
         # Test multiple V_appl
         # for i, V_appl in enumerate([-39e-3, -30e-3, -10e-3, 10e-3]):
-        for i, V_appl in enumerate([-41e-3, -39e-3, -10e-3, 30e-3]):
+        for i, V_appl in enumerate([-39e-3, 30e-3]):
             # Create class
             neuron = Neuron(a, b, x0, Nx, T, Nt,
                             lmbda=lmbda, tau=tau, g_K=g_K, V_thr=V_thr, gamma=gamma, 
